@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+ <appender class="ch.qos.logback.core.rolling.RollingFileAppender" name="RootFileAppender">
+   <append>true</append>
+   <file>${log.dir}DoxMentor4J.log</file>
+   <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+     <level>debug</level>
+   </filter>
+   <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+     <fileNamePattern>${log.dir}DoxMentor4J.log.%d{yyyy-MM-dd-HH-mm-ss}.zip</fileNamePattern>
+   </rollingPolicy>
+   <layout class="ch.qos.logback.classic.PatternLayout">
+     <pattern>%d{yyyy-MM-dd HH:mm:ss},%p,%t,%ex %m%n</pattern>
+   </layout>
+ </appender>
+ <appender class="ch.qos.logback.core.ConsoleAppender" name="RootConsoleAppender">
+   <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+     <level>debug</level>
+   </filter>
+   <layout class="ch.qos.logback.classic.PatternLayout">
+     <pattern>%d{yyyy-MM-dd HH:mm:ss},%p,%t,%ex %m%n</pattern>
+   </layout>
+ </appender>
+ <root>
+   <level value="debug"/>
+   <appender-ref ref="RootFileAppender"/>
+   <appender-ref ref="RootConsoleAppender"/>
+ </root>
+</configuration>

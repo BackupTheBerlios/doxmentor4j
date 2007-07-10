@@ -1,0 +1,4 @@
+port=8088
+archivefile=content.zip
+archivedir=resources/htdocs
+archiveindexdir=resources/index
