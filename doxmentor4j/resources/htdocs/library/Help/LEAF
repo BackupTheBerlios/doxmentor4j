@@ -1,0 +1,4 @@
+name->DoxMentor4J Documentation
+view->href="index.html", description="View as HTML",search="links"
+view->href="index.html", description="HTML in another window",search="no",target="viewer"
+

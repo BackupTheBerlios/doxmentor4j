@@ -1,0 +1,3 @@
+name->Test browse directory
+view->href=library/Test/Test2/Browse-Dirs/dir,description="valid directory",search=no,dir=yes,target="viewer"
+view->href=dir,description="invalid directory",search=no,dir=yes,target="viewer"

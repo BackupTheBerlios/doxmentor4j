@@ -1,0 +1,326 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+<title>
+   DoxMentor4J Documentation Index
+</title>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="content-type" content="application/xhtml+xml; charset=UTF-8">
+<meta http-equiv="content-style-type" content="text/css">
+<link rel="stylesheet" type="text/css" media="all" href="main.css" > </link>
+</head>
+<body>
+<h1>
+   DoxMentor4J
+</h1>
+<font size="-1">
+<a href="#intro">Introduction</a><br>
+<a href="#links">Links</a><br>
+<a href="#startup">Startup</a><br>
+<a href="#screen">Screenshots</a><br>
+<a href="#deps">Dependencies</a><br>
+</font>
+
+<a name="intro"><h2>Introduction</h2></a>
+DoxMentor4J is a standalone cross platform Web/Ajax based documentation library that 
+is fully searchable and may be hosted in the file system, in an archive or 
+embedded in the Java classpath.
+</p>
+<p>
+Users create the library content structure and copy any online books or manuals
+into directories in the library structure. DoxMentor4J then provides a dedicated
+web server which presents the library as a tree structure on a web page. Users 
+can navigate through the tree to locate online books. The tree is AJAX based
+so there is no large initial download of all the nodes in the content structure,
+instead the nodes are downloaded as they are opened.  
+</p>
+<p>
+Because DoxMentor4J is a cross platform Java based application, user can 
+write their online library to CD/DVD or flash and have it available wherever
+they go on different machines and operating systems.  
+</p>
+<p>
+The web server framework classes used by DoxMentor4J is called 
+<a href="http://httpdbase4j.berlios.de/">HttpdBase4J</a> and it 
+supports content inside archive files or in jar and zip files in the Java 
+classpath. The content can therefore be hosted in one compressed file, and as
+many documentation files are often text based this means the space saving can be
+meaningful. Additionally it can be more convenient to have all the content in 
+one file. 
+</p>
+<p>
+DoxMentor4J also supports full text indexing and searching of content using the 
+Lucene library. Content indexing may be enabled/disabled on a node by node
+basis. Search indices can be accessed inside an archive or on cd/dvd. The 
+indexing code currently supports text, html, pdf, chm<sup>[1]</sup> and 
+djvu<sup>[2]</sup>.
+</p>
+<p>
+<a href="properties.html">The DoxMentor4J properties file</a> describes the 
+available options which may be specified in the startup properties file.
+</p>
+<p>
+<a href="customize.html">Customizing DoxMentor4J</a> describes how to create
+your own online library for DoxMentor4J.
+</p>
+<p>
+
+<a name="links"><h2>Links</h2></a>
+<p><b>Download Files:</b>
+<a href="http://developer.berlios.de/project/showfiles.php?group_id=8652">Files </a>
+</p>
+<p><b>Homepage:</b> 
+   <a href="http://doxmentor4j.berlios.de">
+      http://doxmentor4j.berlios.de
+   </a>
+</p>
+<p><b>Project Summary/Services Page:</b> 
+   <a href="http://developer.berlios.de/projects/doxmentor4j/">
+      http://developer.berlios.de/projects/doxmentor4j/
+   </a>
+</p>
+<p><b>Browse CVS:</b>
+   <a href="http://cvs.berlios.de/cgi-bin/viewcvs.cgi/doxmentor4j">
+      Browse CVS
+   </a>
+</p>
+<p><b>Checkout CVS:</b>
+   <a href="https://developer.berlios.de/cvs/?group_id=8652">
+      Checkout CVS
+   </a>
+</p>
+<p><b>CHMLib</b> (Required for extract_chmLib to extract chm files in Linux):&nbsp;
+<a href="http://www.jedrea.com/chmlib/">Download</a>
+</p>
+<p><b>HTML Help</b> (Required for hh.exe to extract chm files in Windows):&nbsp;
+<a href="http://www.microsoft.com/downloads/details.aspx?FamilyID=00535334-c8a6-452f-9aa0-d597d16580cc&displaylang=en">Download</a>
+</p>
+<p> <b>DjVuLibre</b> (Required for djvutxt/djvutxt.exe to extract text from djvu files.):&nbsp;
+<a href="http://djvu.sourceforge.net/">Download</a>
+</p>
+
+<a name="startup"><h2>Startup</h2></a>
+To start DoxMentor4J, ensure your current directory is the DoxMentor4J directory
+by either <i>cd</i>ing to it or by setting the GUI shortcut working
+directory to the DoxMentor4J directory (the directory which contains 
+startup.sh and startup.bat). Now execute startup.sh (Linux) or startup.bat
+to start DoxMentor4J. To view the DoxMentor4J library open the URL:
+<code>
+<span>http://address:port/</span>
+</code>
+in your browser. For example if DoxMentor4J is running on your local 
+computer on port 8088 (the default port) use
+<code>
+<span>http://127.0.0.1:8088/</span>
+</code>
+to start DoxMentor. If you don't have another web server running on port 80 
+then you can specify port=80 in the doxmentor4j.properties file, in which case
+you need not specify a port in the URL ie 
+<code>
+   <span>http://127.0.0.1/</span> 
+</code> will be sufficient.
+</p>
+
+<a name="screen"><h2>Screenshots</h2></a>
+<h3>Online Documentation Tree</h3>
+<img src="doxmentor1.png">
+<h3>Search Results</h3>
+<img src="doxmentor2.png">
+
+<a name="deps"><h2>Dependencies</h2></a>
+<h3>HttpdBase4J</h3>
+<p>
+HttpdBase4J is an embeddable Java web server framework that supports HTTP, HTTPS, 
+templated content and serving content from inside an archive.
+</p>
+<p>
+<b>URL:</b>&nbsp; 
+   <a href="http://httpdbase4j.berlios.de/">
+      http://httpdbase4j.berlios.de/
+   </a>
+</p>
+<p>
+   <b>License:</b>&nbsp;
+   <a href="http://www.gnu.org/licenses/lgpl.html">GNU Lesser General Public License</a>
+</p>
+
+<h3>TrueZip</h3>
+<p>
+HttpdBase4J uses TrueZip for transparent access to multiple archive types.
+</p>
+<p>
+<b>URL:</b>&nbsp;<a href="https://truezip.dev.java.net/">https://truezip.dev.java.net</a>
+</p>
+<p>
+<b>License:</b>&nbsp;<a href="http://www.apache.org/licenses/LICENSE-2.0">Apache License, Version 2.0</a>
+</p>
+<h3>StringTemplate</h3>
+<p>
+StringTemplate is a java template engine used by HttpdBase4J for creating templated content.
+</p>
+<p>
+<b>URL:</b>&nbsp;<a href="http://www.stringtemplate.org/">http://www.stringtemplate.org/</a>
+</p>
+<p>
+<b>License:</b>&nbsp;<a href="http://www.stringtemplate.org/license.html">BSD License]</a>
+</p>
+<h3>Lucene</h3>
+<p>
+Apache Lucene is a high-performance, full-featured text search engine library written entirely in Java.
+DoxMentor4J utilises Lucene to enable full text searching of online documentation.
+</p>
+<p>
+<b>URL:</b>&nbsp; 
+   <a href="http://lucene.apache.org/java/docs/index.html">
+      http://lucene.apache.org/java/docs/index.html
+   </a>
+</p>
+<p>
+   <b>License:</b>&nbsp;
+   <a href="http://www.apache.org/licenses/LICENSE-2.0">Apache License, Version 2.0</a>
+</p>
+
+<h3>PDFBox</h3>
+<p>
+PDFBox is an open source Java PDF library for working with PDF documents.
+DoxMentor4J utilises PDFBox to extract text from PDF files for indexing with Lucene.
+</p>
+<p>
+<b>URL:</b>&nbsp; 
+   <a href="http://www.pdfbox.org/">
+      http://www.pdfbox.org/
+   </a>
+</p>
+<p>
+   <b>License:</b>&nbsp;
+   <a href="http://www.pdfbox.org/license.html">BSD</a>
+</p>
+
+<h3>FontBox</h3>
+<p>
+FontBox is a Java font library used to obtain low level information from font files.
+PDFBox uses FontBox internally, it is not used directly by DoxMentor4J.
+</p>
+<p>
+<b>URL:</b>&nbsp; 
+   <a href="http://www.fontbox.org/">
+      http://www.fontbox.org/
+   </a>
+</p>
+<p>
+   <b>License:</b>&nbsp;
+   <a href="http://www.fontbox.org/license.html">BSD</a>
+</p>
+
+<h3>Jericho HTML Parser</h3>
+<p>
+Jericho HTML Parser is a simple but powerful java library allowing analysis and manipulation 
+of parts of an HTML document, including some common server-side tags, while reproducing verbatim
+any unrecognised or invalid HTML. DoxMentor4J utilises Jericho to extract text from HTML files for
+indexing with Lucene.
+</p>
+<p>
+<b>URL:</b>&nbsp; 
+   <a href="http://jerichohtml.sourceforge.net/doc/index.html">
+      http://jerichohtml.sourceforge.net/doc/index.html
+   </a>
+</p>
+<p>
+   <b>License:</b>&nbsp;
+   <a href="http://www.gnu.org/copyleft/lesser.html">GNU Lesser General Public License</a><br>
+   <a href="http://www.eclipse.org/legal/epl-v10.html">Eclipse Public License (EPL) </a>
+</p>
+
+<h3>Logback</h3>
+<p>
+Logback is intended as a successor to the popular log4j project. DoxMentor4J utilises Logback
+for logging.
+</p>
+<p>
+<b>URL:</b>&nbsp; 
+   <a href="http://logback.qos.ch/">
+      http://logback.qos.ch/
+   </a>
+</p>
+<p>
+   <b>License:</b>&nbsp;
+   <a href="http://logback.qos.ch/license.html">GNU Lesser General Public License</a>
+</p>
+
+
+<h3>SLF4J (The Simple Logging Facade for Java)</h3>
+<p>
+The Simple Logging Facade for Java or (SLF4J) is intended to serve as a simple facade for various logging APIs allowing to the end-user to plug in the desired implementation at deployment time.
+Logback uses SLF4J to define the logging interface.
+</p>
+<p>
+<b>URL:</b>&nbsp; 
+   <a href="http://www.slf4j.org/">
+      http://www.slf4j.org/
+   </a>
+</p>
+<p>
+   <b>License:</b>&nbsp;
+   <a href="http://slf4j.org/license.html">X11</a><br>
+</p>
+
+
+<h3>JCharDet</h3>
+<p>
+Jchardet is a java port of the source from Mozilla's automatic charset detection algorithm. 
+HttpdBase4J uses it to detect character sets of html pages.
+</p>
+<p>
+<b>URL:</b>&nbsp;
+<a href="http://jchardet.sourceforge.net/">http://jchardet.sourceforge.net/</a>
+</p>
+<p>
+<b>License:</b>&nbsp;<a href="http://www.mozilla.org/MPL/">Mozilla Public License</a>
+</p>
+
+<h3>Antlr</h3>
+<p>
+ANTLR is a language tool that provides a framework for constructing recognizers, interpreters,
+compilers, and translators from grammatical descriptions. Antlr is used by StringTemplate and
+is not used directly by HttpdBase4J.
+</p>
+<p>
+<b>URL:</b>&nbsp;<a href="http://www.antlr.org/">http://www.antlr.org/</a>
+</p>
+<p>
+<b>License:</b>&nbsp;<a href="http://www.antlr.org/license.html">BSD License]</a>
+</p>
+<h3>Ant</h3>
+<p>
+Ant is a Java build tool. It is used internally by TrueZip to access tar archives.
+</p>
+<p>
+<b>URL:</b>&nbsp;<a href="http://ant.apache.org/">http://ant.apache.org/</a>
+</p>
+<p>
+<b>License:</b>&nbsp;<a href="http://ant.apache.org/license.html"> The Apache Software License Version 2.0</a>
+</p>
+
+<p>
+<font size="-1">
+<b>[1]</b> - Currently requires external program to extract the chm file. 
+It should be possible to port chmlib (or at least the parts of chmlib
+required for extraction) to Java at a later date.
+</font>
+</p>   
+<p>
+<font size="-1">
+<b>[2]</b> - Currently requires external program to extract text from 
+the djvu file. Not all djvu files contain extractable text.
+</font>
+</p>
+
+<hr>
+<center>
+   <a href="http://developer.berlios.de">
+      <img src="http://developer.berlios.de/bslogo.php?group_id=8652" 
+           width="124" height="32" border="0" alt="BerliOS Logo" />
+   </a>
+</center>
+</body>
+</html>

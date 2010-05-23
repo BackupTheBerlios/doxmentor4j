@@ -1,0 +1,56 @@
+
+body
+{
+   font-family:arial, verdana, sans-serif;
+        /*padding: 1em;*/
+   background-color: #FFFFDE;
+   margin:2;
+   border:0;
+   padding:2;
+   height:100%;
+   max-height:100%;
+
+}
+
+a img {border:none; text-decoration:none; vertical-align:text-bottom;}
+
+.code-input      {color:#0000c8;}
+.code-comment    {color:#d80000;}
+.code-constant   {color:#F000F0;}
+.code-identifier {color:#209090;}
+.code-statement  {color:#982424;}
+.code-variable   {color:#b89b1c;}
+.code-keyword    {color:#0C680C;}
+
+.code 
+{
+        font-family: monospace, "Courier New";
+        color: #0000ff;
+        font-size: 1.0em;
+        background-color:#ffffff;
+}
+
+code 
+{
+        font-family: monospace, "Courier New";
+        color: #0000ff;
+        font-size: 1.0em;
+        background-color:#ffffff;
+}
+
+pre 
+{
+    border: 1pt solid #AEBDCC;
+    background-color: #F3F5F7;
+    margin:0;
+    border:0;
+    padding:2pt;
+/*    padding: 1pt;*/
+    font-family: courier, monospace;
+    white-space: pre;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    white-space: -moz-pre-wrap;
+    white-space: -pre-wrap;
+    white-space: -o-pre-wrap;
+}
