@@ -159,11 +159,14 @@ Example properties file for file system content:
 <span>indexdir=~/DoxMentor/index</span>
 </pre>
 <p>
-or on Windows 
+or on Windows (as \ is interpreted as an escape character it is required to use
+either / or \\ (double backslash) to denote path separators. Using / is preferable
+as it will work in all operating systems)
+)
 </p>
 <pre>
-<span>home=C:\My Documents\DoxMentor\htdocs</span>
-<span>indexdir=C:\My Documents\DoxMentor\index</span>
+<span>home=C:/My Documents/DoxMentor/htdocs</span>
+<span>indexdir=C:\\My Documents\\DoxMentor\\index</span>
 </pre>
 
 <a name="arch"><h2>Content in an Archive</h2> </a>

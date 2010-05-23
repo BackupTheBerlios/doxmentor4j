@@ -9,9 +9,7 @@
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
  * http://www.gnu.org/copyleft/gpl.html
-*/
-
-
+ */
 package net.homeip.donaldm.doxmentor4j.templates;
 
 import java.io.File;
@@ -36,24 +34,33 @@ import org.slf4j.LoggerFactory;
  *
  * @author Donald Munro
  */
-public class Dir  extends TemplatableAdapter
+public class Dir extends TemplatableAdapter
 //-------------------------------------------
 {
-    public Dir() 
-    //----------
-    {
-    }
-    
-    private void setTemplateAttributes(StringTemplate template, Request request)
+   final static private Logger logger = LoggerFactory.getLogger(Dir.class);
+
+   public Dir()
+   //----------
+   {
+   }
+
+   private void setTemplateAttributes(StringTemplate template, Request request)
    //-------------------------------------------------------------------------
-   {            
-      template.setAttribute("injar",(DoxMentor4J.getApp().getArchiveFile() != null));
+   {
+      template.setAttribute("injar", (DoxMentor4J.getApp().getArchiveFile() != null));
       CloneableHeaders getMap = request.getGETParameters();
-      String dir = "",name = "";
+      String dir = "", name = "";
       if (getMap != null)
          dir = getMap.getFirst("dir");
+      if (dir == null)
+      {
+         logger.error("Invalid request to dir.st (" + getClass().getName() + ") dir arg was null in" +
+                 "request " + request.toString());
+         template.setAttribute("dirEntries", new String[0]);
+         return;
+      }
       template.setAttribute("title", "Directory Listing " + dir);
-      template.setAttribute("caption", "Directory Listing " + name);      
+      template.setAttribute("caption", "Directory Listing " + name);
       if (dir.length() > 0)
       {
          Request dirRequest;
@@ -68,24 +75,33 @@ public class Dir  extends TemplatableAdapter
          catch (Exception e)
          {
             dirRequest = null;
-            template.setAttribute("caption", "Error generating directory " + 
-                                  e.getMessage());      
+            template.setAttribute("caption", "Error generating directory "
+                                             + e.getMessage());
          }
-         if (dirRequest == null)
+         if ( (dirRequest == null) || (! dirRequest.exists()) )
          {
-            template.setAttribute("dirEntries", new String[0]);
+            String s;
+            if (dirRequest != null)
+            {
+               logger.info("Invalid directory view request: " + dirRequest.getAbsolutePath());               
+               s = "<font color=\"red\">Invalid directory view request: " + dirRequest.getAbsolutePath()
+                   + "</font>";
+            }
+            else
+               s = "Null directory view request: " + request.getPath();
+            template.setAttribute("dirEntries.{href,name}", "", s);
             return;
          }
          TreeSet<DirItemInterface> dirSet = dirRequest.getDirListDirectories(SORTBY.NAME);
-          _setupListTemplate(dirSet, dirRequest, template, true);
+         _setupListTemplate(dirSet, dirRequest, template, true);
          dirSet = dirRequest.getDirListFiles(SORTBY.NAME);
-         if (! _setupListTemplate(dirSet, dirRequest, template, false))
+         if (!_setupListTemplate(dirSet, dirRequest, template, false))
             template.setAttribute("dirEntries", new String[0]);
       }
       else
          template.setAttribute("dirEntries", new String[0]);
    }
-   
+
    @Override
    public File templateFile(StringTemplate template, Request request,
                             StringBuffer mimeType, File dir)
@@ -95,7 +111,7 @@ public class Dir  extends TemplatableAdapter
       return super.templateFile(template, request, mimeType, dir);
    }
 
-   @Override   
+   @Override
    public String templateString(StringTemplate template, Request request,
                                 StringBuffer mimeType)
    //--------------------------------------------------------------------
@@ -115,28 +131,28 @@ public class Dir  extends TemplatableAdapter
 
    @SuppressWarnings("deprecation")
    private boolean _setupListTemplate(TreeSet<DirItemInterface> dirSet,
-                                      Request dirRequest, StringTemplate template, 
+                                      Request dirRequest, StringTemplate template,
                                       boolean isDirs)
    //-------------------------------------------------------------------------
    {
       if (dirSet == null)
          return false;
 
-      for (Iterator<DirItemInterface> it=dirSet.iterator(); it.hasNext();)
+      for (Iterator<DirItemInterface> it = dirSet.iterator(); it.hasNext();)
       {
          DirItemInterface dirItem = it.next();
-         String path = dirItem.getName();         
+         String path = dirItem.getName();
          int p = path.lastIndexOf('/');
-         if ( (isDirs) && (p > 0) )  
-            p = path.lastIndexOf('/', p-1);
+         if ((isDirs) && (p > 0))
+            p = path.lastIndexOf('/', p - 1);
          if (p < 0)
          {
             p = path.lastIndexOf(File.separatorChar);
-            if ( (isDirs) && (p > 0) )  
-               p = path.lastIndexOf(File.separatorChar, p-1);
+            if ((isDirs) && (p > 0))
+               p = path.lastIndexOf(File.separatorChar, p - 1);
          }
          String name;
-         if ( (p >= 0) && (path.length() > ++p) )
+         if ((p >= 0) && (path.length() > ++p))
             name = path.substring(p);
          else
             name = path;
@@ -146,21 +162,14 @@ public class Dir  extends TemplatableAdapter
          try
          {
             if (dirRequest instanceof ArchiveRequest)
-               fileRequest = new ArchiveRequest((ArchiveRequest)dirRequest, path);
+               fileRequest = new ArchiveRequest((ArchiveRequest) dirRequest, path);
             else
-               fileRequest = new FileRequest((FileRequest)dirRequest, path);
+               fileRequest = new FileRequest((FileRequest) dirRequest, path);
          }
          catch (Exception e)
          {
             fileRequest = null;
-            Logger logger = LoggerFactory.getLogger("net.homeip.donaldm.doxmentor4j");
-            if (logger != null)
-               logger.error("Error creating Request", e);
-            else
-            {
-               System.err.println("Error creating Request");
-               e.printStackTrace(System.err);
-            }
+            logger.error("Error creating Request", e);
             continue;
          }
 
@@ -168,23 +177,23 @@ public class Dir  extends TemplatableAdapter
          if (isDirs)
          {
             try
-            {               
-               href = "/dir.st?" + URLEncoder.encode("dir", "UTF-8") + "=" + 
-                       URLEncoder.encode(href, "UTF-8") + "&" + 
-                       URLEncoder.encode("name", "UTF-8") + "=" + 
-                       URLEncoder.encode(name, "UTF-8");
+            {
+               href = "/dir.st?" + URLEncoder.encode("dir", "UTF-8") + "="
+                      + URLEncoder.encode(href, "UTF-8") + "&"
+                      + URLEncoder.encode("name", "UTF-8") + "="
+                      + URLEncoder.encode(name, "UTF-8");
             }
             catch (Exception e)
             {
-               href = "/dir.st?" + URLEncoder.encode("dir") + "=" + 
-                       URLEncoder.encode(href) + "&" + 
-                       URLEncoder.encode("name") + "=" + 
-                       URLEncoder.encode(name);
-            }      
+               href = "/dir.st?" + URLEncoder.encode("dir") + "="
+                      + URLEncoder.encode(href) + "&"
+                      + URLEncoder.encode("name") + "="
+                      + URLEncoder.encode(name);
+            }
          }
 
-         template.setAttribute("dirEntries.{href,name}", href, name);         
-      }         
+         template.setAttribute("dirEntries.{href,name}", href, name);
+      }
       return true;
    }
 }

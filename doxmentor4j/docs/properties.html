@@ -18,7 +18,7 @@
 The DoxMentor4J property file is used to set the execution properties. It 
 defaults to <i>doxmentor4j.properties</i> in the DoxMentor4J working 
 directory, but may also be specified as the first argument on the command
-line when starting DoxMentor4J. 
+line when starting DoxMentor4J.
 </p>
 <p>
 DoxMentor4J supports the following properties:
@@ -40,7 +40,7 @@ DoxMentor4J supports the following properties:
       <td>archivedir=dir</td>      
       <td>
          <p> 
-            Directory in archive containg docs. dir is a directory in a jar in the classpath or in the archive specified in archivedir=. Default resources/htdocs
+            Directory in archive containing docs. dir is a directory in a jar in the classpath or in the archive specified in archivedir=. Default resources/htdocs
          </p>      
       </td>   
    </tr>
@@ -106,7 +106,26 @@ DoxMentor4J supports the following properties:
    </tr>
    <tr>      
       <td>logdir=dir</td>      
-      <td>Directory to write log files to. Default log in current directory of application.</td>   
+      <td>
+         <p>
+         Directory to write log files to. Default is directory log in current directory of 
+         application ie ./log if that is writable else {TMPDIR}/log where TMPDIR is the system temporary directory.         
+         </p>
+         <p>
+            Logging is performed by the <a href="http://logback.qos.ch">logback</a> library. Logging
+            configuration is performed via a logback.xml file. DoxMentor4J searches for a logback.xml
+            file in the current directory, inside the docs home directory specified via the homedir
+            as described above and inside any directories in the users home directory that match
+            the string doxmentor4j (in lower or upper case) eg /root/DoxMentor4J or
+            C:\Documents and Settings\administrator\Application Data\doxmentor4j. A default logback.xml
+            is included that implements a rolling log ie a new log file is created every day and the
+            previous days log file is compressed. A simpler logback.xml.simple file is also included
+            which only logs for the current session. See
+            (<a href="http://logback.qos.ch/manual/configuration.html">logback</a> for more advanced
+            details on logback configuration.
+
+         </p>
+      </td>
    </tr>
 </table>
 
