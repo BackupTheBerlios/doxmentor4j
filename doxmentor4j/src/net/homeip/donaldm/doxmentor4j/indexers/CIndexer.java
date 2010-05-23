@@ -13,11 +13,19 @@
 
 package net.homeip.donaldm.doxmentor4j.indexers;
 
+import net.homeip.donaldm.doxmentor4j.indexers.spi.Indexable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 public class CIndexer extends SourceIndexer implements Indexable, Cloneable
 //============================================================================
 {
-   private static final String[] C_STOP_WORDS = 
+   final static private Logger logger = LoggerFactory.getLogger(CIndexer.class);
+   
+   @Override public Logger logger() {return logger; }
+
+   private static final String[] C_STOP_WORDS =
    {
       "auto", "const", "double", "float", "int", "short", "struct", "unsigned",
       "break", "continue", "else", "for", "long", "signed", "switch", "void",
@@ -34,6 +42,7 @@ public class CIndexer extends SourceIndexer implements Indexable, Cloneable
       EXTENSIONS = new String[] { "c" }; 
    }
 
+   @Override
    public String[] getLanguageStopWords()
    //------------------------------------
    {

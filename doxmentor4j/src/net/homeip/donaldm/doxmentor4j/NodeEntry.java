@@ -35,19 +35,18 @@ import org.slf4j.LoggerFactory;
 public class NodeEntry
 //=====================
 {
+   final static private Logger logger = LoggerFactory.getLogger(NodeEntry.class);
+
    public final int UNKNOWN = 0;
    public final int LEAF = 1;
    public final int NODE = 2;
    
    public int type = 0;
-
-   private Logger logger = LoggerFactory.getLogger("net.homeip.donaldm.doxmentor4j");         
    
    static public NodeEntry[] getEntries(Request request)
    //---------------------------------------------------
    {
       String s = request.getURI().getPath().trim();
-      Logger l = LoggerFactory.getLogger("net.homeip.donaldm.doxmentor4j");         
       Request dirRequest = request;
       if ( (s.length() == 0) || (s.compareTo("/") == 0) ||
               (s.compareTo("/index.st") == 0) )
@@ -85,10 +84,7 @@ public class NodeEntry
                }
                catch (Exception e)
                {                  
-                  if (l != null)
-                     l.error("Error creating index directory", e);
-                  else
-                     e.printStackTrace(System.err);
+                  logger.error("Error creating index directory", e);
                }               
             }
          }         
@@ -105,10 +101,7 @@ public class NodeEntry
             }
             catch (Exception e)
             {
-               if (l != null)
-                  l.error("Error creating index directory", e);
-               else
-                  e.printStackTrace(System.err);
+               logger.error("Error creating index directory", e);
             }               
          }
       }
@@ -157,11 +150,7 @@ public class NodeEntry
       } 
       catch (Exception e)
       {
-         Logger l = LoggerFactory.getLogger("net.homeip.donaldm.doxmentor4j");         
-         if (l != null)
-            l.error(e.getMessage(), e);
-         else
-            e.printStackTrace(System.err);
+         logger.error(e.getMessage(), e);
          return false;
       }
       finally
@@ -218,12 +207,14 @@ public class NodeEntry
          Pattern stripQuotesPattern = Pattern.compile("\"(.*)\"");
          Map<String, String> matches = new HashMap<String, String>();
          
+         @Override
          public boolean hasNext()
          //----------------------
          {
             return (i < lines.length);
          }
 
+         @Override
          public ViewInfo next()
          //--------------------
          {            
@@ -305,6 +296,7 @@ public class NodeEntry
             }
          }
 
+         @Override
          public void remove()
          {
             throw new UnsupportedOperationException("Not supported.");
@@ -344,21 +336,32 @@ public class NodeEntry
          {
             String href = vi.href;
             if (href != null)
-            {
+            {               
                if (! href.trim().toLowerCase().startsWith("http://"))
                {
                   Request hrefReq = request.getChildRequest(href);
-                  if (hrefReq.exists())
+                  if ( (hrefReq.getName().toLowerCase().contains("dir.st")) || (hrefReq.exists()) )
                      href = hrefReq.getPath();
                   else
-                     href = null;
+                  {
+                     if (! hrefReq.exists())
+                     {
+                        vi.name = "<font color=\"red\">" + hrefReq.getAbsolutePath() + " Invalid" +
+                                  "</font>";
+                        href = "/dev/null";
+                        logger.error(hrefReq.getAbsolutePath() + " does not exist");
+                     }
+                     else
+                        href = null;
+                  }
                   vi.href = href;
                }
             }
             String name = vi.name;
             if (name == null)
                name = m_description;
-            views.add(vi);
+            if (vi.href != null)
+               views.add(vi);
          }
       }
       m_views = views.toArray(m_views);      
@@ -450,6 +453,7 @@ public class NodeEntry
       @SuppressWarnings("deprecation")
       public ViewInfo(String name, String href, String target, 
                       boolean isIndexable, boolean isDir, String search)
+      //----------------------------------------------------------------
       {
          this.name = name;
          if (href == null)
@@ -481,11 +485,7 @@ public class NodeEntry
             }      
             catch (Exception e)
             {
-               Logger l = LoggerFactory.getLogger("net.homeip.donaldm.doxmentor4j");         
-               if (l != null)
-                  l.error(e.getMessage(), e);
-               else
-                  e.printStackTrace(System.err);
+               logger.error(e.getMessage(), e);
             }
          }
             

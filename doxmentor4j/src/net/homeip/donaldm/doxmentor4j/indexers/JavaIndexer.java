@@ -13,10 +13,18 @@
 
 package net.homeip.donaldm.doxmentor4j.indexers;
 
+import net.homeip.donaldm.doxmentor4j.indexers.spi.Indexable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class JavaIndexer extends SourceIndexer implements Indexable, Cloneable
 //============================================================================
 {
-   private static final String[] JAVA_STOP_WORDS = 
+   final static private Logger logger = LoggerFactory.getLogger(JavaIndexer.class);
+   
+   @Override public Logger logger() {return logger; }
+
+   private static final String[] JAVA_STOP_WORDS =
    {
     "public","private","protected","interface",
     "abstract","implements","extends","null", "new",
@@ -36,6 +44,7 @@ public class JavaIndexer extends SourceIndexer implements Indexable, Cloneable
       EXTENSIONS = new String[] { "java", "groovy" }; 
    }   
    
+   @Override
    public String[] getLanguageStopWords()
    {
       return JAVA_STOP_WORDS;

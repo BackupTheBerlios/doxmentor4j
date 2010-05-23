@@ -31,6 +31,8 @@ import org.slf4j.LoggerFactory;
 import sun.misc.Signal;
 import sun.misc.SignalHandler;
 import de.schlichtherle.io.File;
+import java.io.FileFilter;
+import net.homeip.donaldm.httpdbase4j.Http;
 
 public class DoxMentor4J
 //======================
@@ -72,7 +74,7 @@ public class DoxMentor4J
 
    private String                            m_djvuArgs = null;
 
-   private File                              m_logDir = null;
+   private java.io.File                      m_logDir = null;
 
    final static private String               m_defaultHome = 
                                     "resources" + File.separatorChar + "htdocs";
@@ -150,7 +152,7 @@ public class DoxMentor4J
 "or search=[wildcard] eg search=[html/*.html]" + EOL +
 "then the files referenced in the list will be indexed for searching." + EOL + 
 "The Lucene jar file (lucene-core.jar) must be in the class path if using search";
-   
+
    private static final class SingletonHolder
    {
       static final DoxMentor4J singleton = new DoxMentor4J();      
@@ -242,9 +244,9 @@ public class DoxMentor4J
    protected boolean portConfig(java.io.File propertiesFile, Properties properties)
    //----------------------------------------------------------------------
    {
-      if (propertiesFile == null)
+      if (properties == null)
       {
-         m_port = 8088;
+         m_port = 80;
          return true;
       }
       try
@@ -263,10 +265,7 @@ public class DoxMentor4J
    protected boolean dirConfig(java.io.File propertiesFile, Properties properties)
    //---------------------------------------------------------------------
    {
-      String userHome = ((System.getProperty("user.home") == null) 
-                           ? "." 
-                           : System.getProperty("user.home")) + File.separator;
-      if (propertiesFile == null)
+      if (properties == null)
       {  // Assumes content in classpath if no home specified
          m_homeDir = null;
          m_archiveFile = null; 
@@ -317,7 +316,7 @@ public class DoxMentor4J
    protected boolean indexConfig(java.io.File propertiesFile, Properties properties)
    //-----------------------------------------------------------------------
    {
-      if (propertiesFile == null)
+      if (properties == null)
       {
          m_archiveSearchIndexDir = m_defaultIndex;
          return true;
@@ -344,15 +343,15 @@ public class DoxMentor4J
    protected boolean xtractConfig(java.io.File propertiesFile, Properties properties)
    //-----------------------------------------------------------------------
    {
-      if (propertiesFile == null)
+      if (properties == null)
       {
          m_chmExtractor = m_chmArgs = m_djvuExtractor = m_djvuArgs = null;
          return true;
       }   
       m_chmExtractor = properties.getProperty("chmext", null); 
       m_chmArgs = properties.getProperty("chmargs", null); 
-      m_djvuExtractor = properties.getProperty("chmext", null); 
-      m_djvuArgs = properties.getProperty("chmargs", null); 
+      m_djvuExtractor = properties.getProperty("djvuext", null); 
+      m_djvuArgs = properties.getProperty("djvuargs", null); 
       return true;
    }
    
@@ -386,15 +385,70 @@ public class DoxMentor4J
        if (s.substring(0,1).compareToIgnoreCase("y") == 0)
           m_isSearchable = true;       
        
-       m_logDir = new File(properties.getProperty("logdir", "log").trim());
-       if (m_logDir.exists())
+       m_logDir = new java.io.File(properties.getProperty("logdir", "log").trim());
+       if ( (m_logDir.exists()) && (! m_logDir.isDirectory()) )
        {
-          if (m_logDir.isDirectory())
-             Utils.deleteDir(m_logDir);
-          else
-             m_logDir.delete();          
+          System.err.println("Log directory " + m_logDir.getAbsolutePath() +
+                             " exists but is not a directory");
+          return false;
        }
-       m_logDir.mkdirs();       
+       else
+       {
+          if (! m_logDir.exists())
+            m_logDir.mkdirs();
+          // canWrite is not dependable in Windoze for directories
+          java.io.File f;
+          try { f = java.io.File.createTempFile("tmp", ".tmp", m_logDir); } catch (IOException _e) { f = null; }
+          if ( (f == null) || (! f.exists()) )
+          {
+             m_logDir = new java.io.File(System.getProperty("java.io.tmpdir"), "DoxMentor4J");
+             m_logDir = new java.io.File(m_logDir, "log");
+             m_logDir.mkdirs();
+          }
+          else
+          {
+             if (f != null)
+               f.delete();
+             else
+                m_logDir = null;
+          }
+       }
+       if (m_logDir != null)
+       {
+         System.setProperty("LOG_DIR", m_logDir.getAbsolutePath()); // used in default logback.xml
+         java.io.File f = new java.io.File(System.getProperty("user.dir"), "logback.xml");
+         if (! f.exists())
+            f = new java.io.File(m_homeDir, "logback.xml");
+         if (! f.exists())
+         {
+            java.io.File appHomeDir = new java.io.File(System.getProperty("user.home"));
+            java.io.File[] dirs = appHomeDir.listFiles(new FileFilter()
+            {
+               @Override
+               public boolean accept(java.io.File dir)
+               {
+                  if (! dir.isDirectory()) return false;
+                  if (dir.getName().toLowerCase().contains("doxmentor"))
+                     return true;
+                  return false;
+               }
+            });
+            for (java.io.File dir : dirs)
+            {
+               f = new java.io.File(dir, "logback.xml");
+               if (f.exists())
+                  break;
+            }
+         }
+         if (f.exists())
+         {
+            f = f.getParentFile();
+            if (f == null) f = new java.io.File("/");
+            if (f.exists())
+               try { ArchiveHttpd.addToClassPath(f.getAbsolutePath()); } catch (FileNotFoundException _e) {}
+            System.out.println(ArchiveHttpd.getClasspath());
+         }
+       }
        
        if (m_isSearchable)
        {
@@ -426,9 +480,7 @@ public class DoxMentor4J
       
       if (System.getProperty("_DEBUG_") != null)
          isDebug = true;
-      
-      Logger logger = Utils.createLogger(m_logDir, isDebug);      
-      
+            
       // Assume content in classpath if no home specified
       if ( (m_archiveFile == null) && (m_homeDir == null) )
       {
@@ -453,8 +505,6 @@ public class DoxMentor4J
          if (m_archiveFile == null)
          {
             System.err.println("Error opening archive dir");
-            if (logger != null)
-               logger.error("DoxMentor4J.start(): Error opening archive dir");
             return false;
          }   
          m_archivePath = new File(m_archiveFile, m_archiveDirName);
@@ -486,7 +536,8 @@ public class DoxMentor4J
          m_httpd.setCaching(false);
          m_httpd.setVerbose(true);
       }
-      m_httpd.addHandler(".st", stHandler);      
+      m_httpd.addHandler(".st", stHandler);
+      Logger logger = LoggerFactory.getLogger(DoxMentor4J.class);
       m_httpd.setLogger(logger);
       m_httpd.addDefaultFile("index.html");
       
@@ -504,12 +555,8 @@ public class DoxMentor4J
       
       boolean b = m_httpd.start(m_port, "/");  
       if (b)
-      {
-         Logger l = LoggerFactory.getLogger("net.homeip.donaldm.doxmentor4j");
-         //Logger l = Utils.getLogger();
-         if (l != null)
-            l.info("DoxMentor4J started: " + new Date().toString());         
-      }
+         logger.info("DoxMentor4J listening on port: " + m_httpd.getPort());
+
       synchronized (m_mainThread)
       {
          try { m_mainThread.wait(); } catch (Exception e) { e.printStackTrace(System.err);}
@@ -523,7 +570,6 @@ public class DoxMentor4J
       DoxMentor4J app = DoxMentor4J.getApp();
       if ( (app.m_httpd != null) && (app.m_httpd.isStarted()) )
          app.m_httpd.stop(1);
-      Utils.stopLogger();
    }
    
    public static void main(String[] args)
@@ -575,7 +621,7 @@ public class DoxMentor4J
       {
          System.err.println(e.getMessage());
          ok = false;
-      }
+      }      
       if (! ok)
          System.err.println("DoxMentor4J: Startup error");
    }   
@@ -592,7 +638,7 @@ public class DoxMentor4J
       File destDir = new File(dest);
       return f.copyAllTo(destDir);
    }
-   
+
    static final class MySignalHandler implements SignalHandler
    //=========================================================
    {    

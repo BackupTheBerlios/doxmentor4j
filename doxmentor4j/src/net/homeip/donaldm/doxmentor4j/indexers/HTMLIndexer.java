@@ -13,6 +13,7 @@
 
 package net.homeip.donaldm.doxmentor4j.indexers;
 
+import net.homeip.donaldm.doxmentor4j.indexers.spi.Indexable;
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -40,7 +41,9 @@ import de.schlichtherle.io.FileInputStream;
 public class HTMLIndexer extends Indexer implements Indexable, Cloneable
 //======================================================================
 {      
-   private Logger logger = LoggerFactory.getLogger("net.homeip.donaldm.doxmentor4j");         
+   final static private Logger logger = LoggerFactory.getLogger(HTMLIndexer.class);
+
+   @Override public Logger logger() {return logger; }
 
    public HTMLIndexer() throws IOException
    //-------------------------------------
@@ -49,6 +52,7 @@ public class HTMLIndexer extends Indexer implements Indexable, Cloneable
                      { "html", "htm", "ht", "asp", "xml", "xhttp" };
    }   
    
+   @Override
    public Object getData(InputStream is, String href, String fullPath, 
                          StringBuffer title, StringBuffer body)
    //-------------------------------------------------------------------
@@ -83,10 +87,7 @@ public class HTMLIndexer extends Indexer implements Indexable, Cloneable
       }
       catch (Exception e)
       {
-         if (logger != null)
-            logger.error("Reading document data " + fullPath, e);
-         else
-            e.printStackTrace(System.err);
+         logger.error("Reading document data " + fullPath, e);
          return null;
       }
       finally
@@ -98,6 +99,7 @@ public class HTMLIndexer extends Indexer implements Indexable, Cloneable
    }
    
    @SuppressWarnings("unchecked")
+   @Override
    public long index(String href, String fullPath, boolean followLinks,
                      Object... extraParams) 
                   throws IOException
@@ -105,10 +107,7 @@ public class HTMLIndexer extends Indexer implements Indexable, Cloneable
    {
       if (m_indexWriter == null)
       {         
-         if (logger != null)
-            logger.error("HTMLIndexer: index writer is null");
-         else
-            System.err.println("HTMLIndexer: index writer is null");
+         logger.error("HTMLIndexer: index writer is null");
          return -1;
       }
       
@@ -134,13 +133,7 @@ public class HTMLIndexer extends Indexer implements Indexable, Cloneable
          catch (Exception e)
          {            
             e.printStackTrace(System.err);
-            if (logger != null)
-               logger.error("Error opening " + fullPath, e);
-            else
-            {
-               System.out.println("Error opening " + fullPath + ": " + e.getMessage());
-               e.printStackTrace(System.err);
-            }
+            logger.error("Error opening " + fullPath, e);
             is = null;
             return -1;
          }
@@ -173,10 +166,7 @@ public class HTMLIndexer extends Indexer implements Indexable, Cloneable
             }
             else
             {
-               if (logger != null)
-                  logger.error("HTMLIndexer: Error parsing html: " + fullPath);
-               else
-                  System.err.println("Error parsing html: " + fullPath);
+               logger.error("HTMLIndexer: Error parsing html: " + fullPath);
             }
          }
          if ( (followLinks) &&  (source != null) )
@@ -252,10 +242,7 @@ public class HTMLIndexer extends Indexer implements Indexable, Cloneable
       }
       catch (Exception e)
       {         
-         if (logger != null)
-            logger.error("Indexing document " + fullPath, e);
-         else
-            e.printStackTrace(System.err);
+         logger.error("Indexing document " + fullPath, e);
          return ((count == 0) ? -1 : count);
       }
 

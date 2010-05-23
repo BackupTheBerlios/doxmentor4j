@@ -13,6 +13,7 @@
 
 package net.homeip.donaldm.doxmentor4j.indexers;
 
+import net.homeip.donaldm.doxmentor4j.indexers.spi.Indexable;
 import java.io.Reader;
 import java.util.Set;
 import net.homeip.donaldm.doxmentor4j.DoxMentor4J;
@@ -22,21 +23,15 @@ import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.store.Directory;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 /**
  * Abstract base class for indexers for indexing computer languages
  */
 abstract public class SourceIndexer extends Indexer implements Indexable, 
                                                                  Cloneable
 //==========================================================================
-{
-
+{   
    static protected boolean m_isUseSourceAnalyser = false;
-   
-   static private Logger logger = LoggerFactory.getLogger("net.homeip.donaldm.doxmentor4j");
-   
+
    public SourceIndexer()
    //----------------------
    {
@@ -44,6 +39,7 @@ abstract public class SourceIndexer extends Indexer implements Indexable,
    
    static public void setUserSourceAnalyzer(boolean b) { m_isUseSourceAnalyser = b; }
       
+   @Override
    public void setIndexWriter(IndexWriter indexWriter)
    //-------------------------------------------------------
    {
@@ -76,13 +72,7 @@ abstract public class SourceIndexer extends Indexer implements Indexable,
          }
          catch (Exception e)
          {
-            if (logger != null)
-               logger.error("Error opening index directory " + dirName, e);
-            else
-            {
-               System.err.println("Error opening index directory " + dirName);
-               e.printStackTrace(System.err);               
-            }
+            logger().error("Error opening index directory " + dirName, e);
             m_indexWriter = null;
             return;
          }         
@@ -116,6 +106,7 @@ abstract public class SourceIndexer extends Indexer implements Indexable,
          m_stopSet = StopFilter.makeStopSet(getLanguageStopWords());
       }
       
+      @Override
       public TokenStream tokenStream(String fieldName, Reader reader)
       //-------------------------------------------------------------
       {

@@ -13,21 +13,18 @@
 
 package net.homeip.donaldm.doxmentor4j.indexers;
 
-import java.io.BufferedReader;
+import net.homeip.donaldm.doxmentor4j.indexers.spi.Indexable;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.util.HashMap;
-import java.util.Map;
 import net.homeip.donaldm.doxmentor4j.ArchiveDirectory;
-import net.homeip.donaldm.doxmentor4j.DoxMentor4J;
+import net.homeip.donaldm.doxmentor4j.Utils;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 
+import org.openide.util.Lookup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,70 +33,19 @@ import org.slf4j.LoggerFactory;
 public class IndexFactory
 //=========================
 {   
+   final static private Logger logger = LoggerFactory.getLogger(IndexFactory.class);
+
    private static final class SingletonHolder
    {
       static final IndexFactory singleton = new IndexFactory();      
    }
 
-   private static Map<String, Indexable> m_IndexerMap = 
-                                                new HashMap<String, Indexable>();
-   
    protected static Directory m_directory = null;
-   
+
    protected static Analyzer m_analyzer = new StandardAnalyzer();
    
    protected static IndexWriter m_indexWriter = null;
-  
-   private static Logger logger = LoggerFactory.getLogger("net.homeip.donaldm.doxmentor4j");
-   
-   static
-   {      
-      ClassLoader loader = DoxMentor4J.getApp().getClass().getClassLoader();
-      InputStream is = loader.getResourceAsStream(
-              "net/homeip/donaldm/doxmentor4j/indexers/");
-      if (is != null)
-      {
-         BufferedReader br = new BufferedReader(new InputStreamReader(is));
-         String klassName;
-         try
-         { klassName = br.readLine(); }
-         catch (Exception e)
-         { klassName = null; }
-         while (klassName != null)
-         {
-            int p = klassName.indexOf(".class");
-            if (p >= 0)
-               klassName = klassName.substring(0, p);
-            Indexable instance = null;
-            try
-            {
-               Class klass = Class.forName("net.homeip.donaldm.doxmentor4j.indexers." +
-                       klassName);
-               instance = (Indexable) klass.newInstance();
-               instance.setIndexWriter(m_indexWriter);
-            }
-            catch (Exception e)
-            {
-               try
-               { klassName = br.readLine(); }
-               catch (Exception ee)
-               { klassName = null; }
-               continue;
-            }
-            if (instance != null)
-            {
-               String[] extensions = instance.supportedFileTypes();
-               for (int i=0; i<extensions.length; i++)
-                  m_IndexerMap.put(extensions[i], instance);
-            }
-            try
-            { klassName = br.readLine(); }
-            catch (Exception ee)
-            { klassName = null; }
-         }
-      }
-   }
-   
+        
    public static IndexFactory getApp()
    //---------------------------------
    {
@@ -110,37 +56,37 @@ public class IndexFactory
    //--------------------
    {       
    }
-   
+
+   public static Directory getDirectory() { return m_directory; }
+
    public Indexable getIndexer(String extension)
    //-------------------------------------------
    {
-      extension = extension.trim().toLowerCase();
-      if (extension.startsWith("."))
-         extension = extension.substring(1);
-      Indexer o = (Indexer) m_IndexerMap.get(extension);
-      if (o == null) return null;
-      Indexable c = null;
-      try
+      Lookup.Result<Indexable> indexors = Lookup.getDefault().lookupResult(Indexable.class);
+      for (Indexable indexable : indexors.allInstances())
       {
-         c = (Indexable) o.clone();
-      }
-      catch (Exception e)
-      {
-         if (logger != null)
-            logger.error("Exception cloning " + o.getClass().getName(), e);
-         else
+         if (! indexable.supportsFileType(extension)) continue;
+         Indexer indexer = null;
+         try
          {
-            System.err.println("Exception cloning " + o.getClass().getName());
-            e.printStackTrace(System.err);
+            Indexer ind = (Indexer) (((Indexer) indexable).clone());
+            indexer = ind;
          }
-         return null;
+         catch (Exception e)
+         {
+            logger.warn("Error cloning " + indexable + " using uncloned instance");
+            try { indexer = (Indexer) indexable; } catch (Exception _e) { indexer = null; logger.error("", _e);}
+         }
+         if (indexer != null)
+         {
+            indexer.setIndexWriter(m_indexWriter);
+            return indexer;
+         }
       }
-      ((Indexer) c).setIndexWriter(m_indexWriter);
-      return c;
+      logger.error("Could not find indexor class for extension " + extension);
+      return null;
    }
-   
-   public static Directory getDirectory() { return m_directory; }
-   
+      
    public static Analyzer getAnalyzer() { return m_analyzer; }
    
    static public void create(File archiveFile, String archiveIndexDirName, 
@@ -166,22 +112,30 @@ public class IndexFactory
       if (archiveIndexDirName != null)
          m_directory = ArchiveDirectory.getDirectory(archiveFile, 
                                                      archiveIndexDirName);
-      else
-         if (indexDirName != null)
+      else if (indexDirName != null)
+      {
+         java.io.File f = new File(indexDirName);
+         if ( (f.exists()) && (! f.isDirectory()) )
+            f.delete();
+         if (! f.exists())
+            f.mkdirs();
+         File ff;
+         try { ff = File.createTempFile("tst", ".tmp", f); } catch (Exception _e) { ff = null; }
+         if ( (ff == null) || (! ff.exists()) )
          {
-            java.io.File f = new File(indexDirName);
-            if (! f.exists())
-               f.mkdirs();
-            if (! f.canWrite())
-            {
-               System.out.println("Read-Only media for " + indexDirName + 
-                                  ". Disabling locks");
-               FSDirectory.setDisableLocks(true);
-            }
-            m_directory = FSDirectory.getDirectory(indexDirName);            
+            System.out.println("Read-Only media for " + indexDirName +
+                               ". Disabling locks");
+            FSDirectory.setDisableLocks(true);
          }
          else
-            throw new IOException("Index directory invalid");
+         {
+            if (ff != null)
+               ff.delete();
+         }
+         m_directory = FSDirectory.getDirectory(indexDirName);
+      }
+      else
+         throw new IOException("Index directory invalid");
       m_indexWriter = new IndexWriter(m_directory, m_analyzer, isCreate);
    }      
    
@@ -203,13 +157,21 @@ public class IndexFactory
          try { m_directory.close(); } catch (Exception e) {}
       m_analyzer = analyzer;
       java.io.File f = new File(indexDirName);
+      if ( (f.exists()) && (! f.isDirectory()) )
+         f.delete();
       if (! f.exists())
          f.mkdirs();
-      if (! f.canWrite())
+      File ff;
+      try { ff = File.createTempFile("tst", ".tmp", f); } catch (Exception _e) { ff = null; }
+      if ( (ff == null) || (! ff.exists()) )
       {
-         System.out.println("Read-Only media for " + indexDirName + 
-                            ". Disabling locks");
+         logger.info("Read-Only media for " + indexDirName + ". Disabling locks");
          FSDirectory.setDisableLocks(true);
+      }
+      else
+      {
+         if (ff != null)
+            ff.delete();
       }
       m_directory = FSDirectory.getDirectory(indexDirName);      
       m_indexWriter = new IndexWriter(m_directory, m_analyzer, isCreate);
@@ -225,13 +187,7 @@ public class IndexFactory
       }
       catch (Exception e)
       {
-         if (logger != null)
-            logger.error("Error optimizing Lucene index directory", e);
-         else
-         {
-            System.err.println("Error optimizing Lucene index directory");
-            e.printStackTrace(System.err);
-         }
+         logger.error("Error optimizing Lucene index directory", e);
          return false;
       }
       return true;
@@ -247,13 +203,7 @@ public class IndexFactory
       }
       catch (Exception e)
       {
-         if (logger != null)
-            logger.error("Error optimizing Lucene index directory", e);
-         else
-         {
-            System.err.println("Error optimizing Lucene index directory");
-            e.printStackTrace(System.err);
-         }
+         logger.error("Error optimizing Lucene index directory", e);
          return false;
       }
       return true;
@@ -269,13 +219,7 @@ public class IndexFactory
       }
       catch (Exception e)
       {
-         if (logger != null)
-            logger.error("Error closing Lucene index directory", e);
-         else
-         {
-            System.err.println("Error closing Lucene index directory");
-            e.printStackTrace(System.err);
-         }
+         logger.error("Error closing Lucene index directory", e);
          return false;
       }
       m_indexWriter = null;

@@ -13,10 +13,18 @@
 
 package net.homeip.donaldm.doxmentor4j.indexers;
 
+import net.homeip.donaldm.doxmentor4j.indexers.spi.Indexable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class TxtIndexer extends Indexer implements Indexable, Cloneable
 //=====================================================================
 {   
-   public TxtIndexer() 
+   final static private Logger logger = LoggerFactory.getLogger(TxtIndexer.class);
+   
+   @Override public Logger logger() {return logger; }
+
+   public TxtIndexer()
    //-----------------
    {
       EXTENSIONS = new String[] { "txt", "asc" };

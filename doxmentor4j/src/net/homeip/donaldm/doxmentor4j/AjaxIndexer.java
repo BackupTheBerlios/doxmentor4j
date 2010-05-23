@@ -35,7 +35,7 @@ import net.homeip.donaldm.httpdbase4j.Httpd;
 import net.homeip.donaldm.httpdbase4j.Postable;
 import net.homeip.donaldm.httpdbase4j.Request;
 import net.homeip.donaldm.doxmentor4j.indexers.IndexFactory;
-import net.homeip.donaldm.doxmentor4j.indexers.Indexable;
+import net.homeip.donaldm.doxmentor4j.indexers.spi.Indexable;
 import net.homeip.donaldm.doxmentor4j.indexers.SourceIndexer;
 
 import org.slf4j.Logger;
@@ -49,6 +49,8 @@ import de.schlichtherle.io.FileInputStream;
 public class AjaxIndexer implements Postable
 //==========================================
 {    
+   final static private Logger logger = LoggerFactory.getLogger(AjaxIndexer.class);
+
    /**
     * Executor for the entire indexing process. Only one allowed.
     */ 
@@ -66,8 +68,6 @@ public class AjaxIndexer implements Postable
 
    private ArrayList<DelayedIndexParams>  m_indexLater      = null;
    
-   private Logger logger = LoggerFactory.getLogger("net.homeip.donaldm.doxmentor4j");         
-
    final protected int                    MAX_INDEX_THREADS = 3;
    
    static private AtomicLong              m_count           = null;
@@ -95,6 +95,7 @@ public class AjaxIndexer implements Postable
    {
       m_thread = new Callable<Boolean>()
       {
+         @Override
          public Boolean call()
          // ------------------
          {
@@ -121,10 +122,7 @@ public class AjaxIndexer implements Postable
             }
             catch (Exception e)
             {
-               if (logger != null)
-                  logger.error("Error creating index directory", e);
-               else
-                  e.printStackTrace(System.err);
+               logger.error("Error creating index directory", e);
                m_stop = m_busy = false;
                return false;
             }
@@ -215,10 +213,7 @@ public class AjaxIndexer implements Postable
       }
       catch (Exception e)
       {
-         if (logger != null)
-            logger.error(e.getMessage(), e);
-         else
-            e.printStackTrace(System.err);
+         logger.error(e.getMessage(), e);
          return false;
       }
       return true;
@@ -257,10 +252,7 @@ public class AjaxIndexer implements Postable
          }
          catch (Exception e)
          {
-            if (logger != null)
-               logger.error("Exception indexing  " + leaf.getAbsolutePath(), e);
-            else
-               e.printStackTrace(System.err);
+            logger.error("Exception indexing  " + leaf.getAbsolutePath(), e);
          }
       }
       else
@@ -270,6 +262,7 @@ public class AjaxIndexer implements Postable
          { 
             dirs = dir.listFiles(new FileFilter() 
             {
+               @Override
                public boolean accept(java.io.File f)
                {
                   File file = (File) f;
@@ -282,6 +275,7 @@ public class AjaxIndexer implements Postable
             {
                dirs = dir.listFiles(new FileFilter() 
                {
+               @Override
                   public boolean accept(java.io.File f)
                   {
                      return f.isDirectory();
@@ -331,10 +325,7 @@ public class AjaxIndexer implements Postable
       if ( (href != null) &&
               (href.toLowerCase().startsWith("http://")) )
       {
-         if (logger != null)
-            logger.error("Cannot index remote file" + href);
-         else
-            System.err.println("Cannot index remote file" + href);         
+         logger.error("Cannot index remote file" + href);
          return;
       }
       int p;
@@ -396,10 +387,7 @@ public class AjaxIndexer implements Postable
       }
       catch (Exception e)
       {
-         if (logger != null)
-            logger.error(e.getMessage(), e);
-         else
-            e.printStackTrace(System.err);
+         logger.error(e.getMessage(), e);
          return;
       }
       String fileList = "";
@@ -475,28 +463,23 @@ public class AjaxIndexer implements Postable
       {
          m_indexExecutor.execute(new Runnable() 
          {
+            @Override
             public void run()
             {
                try
                {
                   indexer.index(href, fullPath, followLinks);
                }
-               catch (Exception e)
+               catch (Exception ee)
                {  
-                  if (logger != null)
-                     logger.error("Indexing error", e);
-                  else
-                     e.printStackTrace(System.err);
+                  logger.error("Indexing error", ee);
                }
             }
          });
       }
       catch (Exception e)
       {
-         if (logger != null)
-            logger.error(e.getMessage(), e);
-         else
-            e.printStackTrace(System.err);
+         logger.error(e.getMessage(), e);
       }
    }
    
@@ -536,6 +519,7 @@ public class AjaxIndexer implements Postable
       return hrefs.toArray(a);
    }
    
+   @Override
    public Object onHandlePost(long id, HttpExchange ex, Request request,
                               HttpResponse r, java.io.File dir, 
                               Object... extraParameters)
@@ -584,6 +568,7 @@ public class AjaxIndexer implements Postable
       public DaemonThreadFactory(String name) { this.name = name; }
       
       
+      @Override
       public Thread newThread(Runnable r)
       {
         Thread t = new Thread(r);

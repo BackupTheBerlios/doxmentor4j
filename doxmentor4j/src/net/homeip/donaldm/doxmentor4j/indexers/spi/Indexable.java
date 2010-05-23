@@ -11,7 +11,7 @@
  * http://www.gnu.org/copyleft/gpl.html
 */
 
-package net.homeip.donaldm.doxmentor4j.indexers;
+package net.homeip.donaldm.doxmentor4j.indexers.spi;
 
 import java.io.IOException;
 import java.io.InputStream;

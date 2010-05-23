@@ -13,11 +13,19 @@
 
 package net.homeip.donaldm.doxmentor4j.indexers;
 
+import net.homeip.donaldm.doxmentor4j.indexers.spi.Indexable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 public class CppIndexer extends SourceIndexer implements Indexable, Cloneable
 //============================================================================
 {
-   private static final String[] CPP_STOP_WORDS = 
+   final static private Logger logger = LoggerFactory.getLogger(CppIndexer.class);
+   
+   @Override public Logger logger() {return logger; }
+
+   private static final String[] CPP_STOP_WORDS =
    {
       "auto", "const", "double", "float", "int", "short", "struct", "unsigned",
       "break", "continue", "else", "for", "long", "signed", "switch", "void",
@@ -36,6 +44,7 @@ public class CppIndexer extends SourceIndexer implements Indexable, Cloneable
       EXTENSIONS = new String[] { "c++", "cpp", "cxx", "cc", "h", "hpp", "h++" }; 
    }
 
+   @Override
    public String[] getLanguageStopWords()
    //------------------------------------
    {

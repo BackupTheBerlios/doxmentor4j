@@ -13,11 +13,19 @@
 
 package net.homeip.donaldm.doxmentor4j.indexers;
 
+import net.homeip.donaldm.doxmentor4j.indexers.spi.Indexable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 public class PhpIndexer extends SourceIndexer implements Indexable, Cloneable
 //============================================================================
 {
-   private static final String[] PHP_STOP_WORDS = 
+   final static private Logger logger = LoggerFactory.getLogger(PhpIndexer.class);
+   
+   @Override public Logger logger() {return logger; }
+
+   private static final String[] PHP_STOP_WORDS =
    {
       "and", "E_PARSE", "old_function", "$argv", "E_ERROR", "or", "as", 
       "E_WARNING", "parent", "$argc", "eval", "PHP_OS", "break", "exit",
@@ -38,7 +46,7 @@ public class PhpIndexer extends SourceIndexer implements Indexable, Cloneable
       EXTENSIONS = new String[] { "php", "php4", "php5" }; 
    }
 
-   public String[] getLanguageStopWords()
+   @Override public String[] getLanguageStopWords()
    //------------------------------------
    {
       return PHP_STOP_WORDS;

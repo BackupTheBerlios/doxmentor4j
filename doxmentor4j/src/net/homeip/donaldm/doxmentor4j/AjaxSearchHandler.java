@@ -24,7 +24,7 @@ import net.homeip.donaldm.httpdbase4j.HttpResponse;
 import net.homeip.donaldm.httpdbase4j.Postable;
 import net.homeip.donaldm.httpdbase4j.Request;
 import net.homeip.donaldm.doxmentor4j.indexers.IndexFactory;
-import net.homeip.donaldm.doxmentor4j.indexers.Indexable;
+import net.homeip.donaldm.doxmentor4j.indexers.spi.Indexable;
 
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
@@ -48,15 +48,15 @@ import de.schlichtherle.io.FileInputStream;
 public class AjaxSearchHandler implements Postable
 //================================================
 {
+   final static private Logger logger = LoggerFactory.getLogger(AjaxSearchHandler.class);
    static protected int HITS_PER_PAGE = 10;
    
-   private Logger logger = LoggerFactory.getLogger("net.homeip.donaldm.doxmentor4j");         
-
    public AjaxSearchHandler() 
    //------------------------
    {
    }
 
+   @Override
    public Object onHandlePost(long id, HttpExchange ex, Request request,
                               HttpResponse r, java.io.File dir, 
                               Object... extraParameters)
@@ -103,7 +103,7 @@ public class AjaxSearchHandler implements Postable
       Directory directory = null;
       IndexReader indexReader = null;
       Searcher searcher = null;
-      StringBuffer html = new StringBuffer();
+      StringBuilder html = new StringBuilder();
       try
       {
          try
@@ -119,10 +119,7 @@ public class AjaxSearchHandler implements Postable
          }
          catch (Exception e)
          {
-            if (logger != null)
-               logger.error("Could not open search index directory", e);
-            else
-               e.printStackTrace(System.err);
+            logger.error("Could not open search index directory", e);
             return errorMessage("Could not open search index directory " + "<br>" 
                                 + e.getMessage());
          }
@@ -136,10 +133,7 @@ public class AjaxSearchHandler implements Postable
          }
          catch (ParseException e)
          {
-            if (logger != null)
-               logger.error("Error parsing search text (" + searchText + ")", e);
-            else
-               e.printStackTrace(System.err);
+            logger.error("Error parsing search text (" + searchText + ")", e);
             return errorMessage("Error parsing search text (" + searchText + ")<br>"
                     + e.getMessage());
          }
@@ -211,10 +205,7 @@ public class AjaxSearchHandler implements Postable
       }
       catch (Exception e)
       {
-         if (logger != null)
-            logger.error("Error creating search query (" + searchText + ")", e);
-         else
-            e.printStackTrace(System.err);
+         logger.error("Error creating search query (" + searchText + ")", e);
          return errorMessage("Error creating search query (" + searchText + ")<br>"
                  + e.getMessage());
       }
@@ -253,10 +244,7 @@ public class AjaxSearchHandler implements Postable
          }
          catch (Exception e)
          {
-            if (logger != null)
-               logger.error("Error opening " + f.getAbsolutePath(), e);
-            else
-               e.printStackTrace(System.err);
+            logger.error("Error opening " + f.getAbsolutePath(), e);
             return "Error opening " + f.getAbsolutePath() + " (" + 
                    e.getMessage() + ")";
          }
@@ -267,10 +255,10 @@ public class AjaxSearchHandler implements Postable
       
       String ext = Utils.getExtension(href);
       Indexable indexer = IndexFactory.getApp().getIndexer(ext);
-      StringBuffer sb = new StringBuffer();
+      StringBuilder sb = new StringBuilder();
       if (indexer != null)
       {
-         StringBuffer title = new StringBuffer();
+         StringBuilder title = new StringBuilder();
          StringBuffer body = new StringBuffer();
          if (indexer.getData(is, href, f.getAbsolutePath(), null, body) != null)
          {
@@ -289,6 +277,8 @@ public class AjaxSearchHandler implements Postable
             }
          }
       }
+      else
+         logger.warn("No indexor for " + href);
       return sb.toString();
    }
    

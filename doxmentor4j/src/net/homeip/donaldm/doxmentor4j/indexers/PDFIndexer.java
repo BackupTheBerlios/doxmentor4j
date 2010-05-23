@@ -13,6 +13,7 @@
 
 package net.homeip.donaldm.doxmentor4j.indexers;
 
+import net.homeip.donaldm.doxmentor4j.indexers.spi.Indexable;
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -33,16 +34,19 @@ import de.schlichtherle.io.FileInputStream;
 public class PDFIndexer extends Indexer implements Indexable, Cloneable
 //=====================================================================
 {
+   final static private Logger logger = LoggerFactory.getLogger(PDFIndexer.class);
+
+   @Override public Logger logger() {return logger; }
+
    private PDFTextStripper m_stripper = null;
-   
-   private Logger logger = LoggerFactory.getLogger("net.homeip.donaldm.doxmentor4j");
-           
+              
    public PDFIndexer()
    //-----------------
    {
       EXTENSIONS = new String[] { "pdf" };
    }
 
+   @Override
    public Object getData(InputStream is, String href, String fullPath, 
                          StringBuffer title, StringBuffer body)
    //-------------------------------------------------------------------
@@ -73,13 +77,7 @@ public class PDFIndexer extends Indexer implements Indexable, Cloneable
       }
       catch (Exception e)
       {
-         if (logger != null)
-            logger.error("Error extracting PDF text from " + fullPath, e);
-         else
-         {
-            System.err.println("Error extracting PDF text from " + fullPath);
-            e.printStackTrace(System.err);
-         }
+         logger.error("Error extracting PDF text from " + fullPath, e);
          return null;
       }
       finally
@@ -89,17 +87,15 @@ public class PDFIndexer extends Indexer implements Indexable, Cloneable
       }
       return pdf;
    }
-   
+
+   @Override
    public long index(String href, String fullPath, boolean followLinks,
                      Object... extraParams) throws IOException
    //------------------------------------------------------------------
    {
       if (m_indexWriter == null)
       {
-         if (logger != null)
-            logger.error("PDFIndexer: index writer is null");
-         else
-            System.err.println("PDFIndexer: index writer is null");
+         logger.error("PDFIndexer: index writer is null");
          return -1;
       }
       long count =0, c =0;
@@ -133,13 +129,7 @@ public class PDFIndexer extends Indexer implements Indexable, Cloneable
       }
       catch (Exception e)
       {
-         if (logger != null)
-            logger.error("Error indexing PDF text from " + fullPath, e);
-         else
-         {
-            System.err.println("Error indexing PDF text from " + fullPath);
-            e.printStackTrace(System.err);
-         }
+         logger.error("Error indexing PDF text from " + fullPath, e);
          return ((count == 0) ? -1 : count);
       }
 

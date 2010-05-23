@@ -13,11 +13,19 @@
 
 package net.homeip.donaldm.doxmentor4j.indexers;
 
+import net.homeip.donaldm.doxmentor4j.indexers.spi.Indexable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 public class RubyIndexer extends SourceIndexer implements Indexable, Cloneable
 //============================================================================
 {
-   private static final String[] RUBY_STOP_WORDS = 
+   final static private Logger logger = LoggerFactory.getLogger(RubyIndexer.class);
+   
+   @Override public Logger logger() {return logger; }
+
+   private static final String[] RUBY_STOP_WORDS =
    {      
       "alias", "and", "BEGIN", "begin", "break", "case", "class", "def", 
       "defined", "do", "else", "elsif", "END", "end", "ensure", "false", "for",
@@ -33,7 +41,7 @@ public class RubyIndexer extends SourceIndexer implements Indexable, Cloneable
       EXTENSIONS = new String[] { "rb", "ruby" }; 
    }
 
-   public String[] getLanguageStopWords()
+   @Override public String[] getLanguageStopWords()
    //------------------------------------
    {
       return RUBY_STOP_WORDS;

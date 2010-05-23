@@ -13,6 +13,7 @@
 
 package net.homeip.donaldm.doxmentor4j.indexers;
 
+import net.homeip.donaldm.doxmentor4j.indexers.spi.Indexable;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -25,20 +26,16 @@ import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.index.IndexWriter;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import de.schlichtherle.io.File;
 import de.schlichtherle.io.FileInputStream;
 
 abstract public class Indexer implements Indexable, Cloneable
 //===========================================================
-{         
-   
-   protected String[] EXTENSIONS = null;
+{            
+   protected String[] EXTENSIONS = new String[0];
    
    protected IndexWriter m_indexWriter = null;
-
-   private Logger logger = LoggerFactory.getLogger("net.homeip.donaldm.doxmentor4j");
    
    public Indexer() {}
    
@@ -47,13 +44,20 @@ abstract public class Indexer implements Indexable, Cloneable
    {
       m_indexWriter = indexWriter;
    }
-   
-   public String[] supportedFileTypes()
-   //----------------------------------
+
+   abstract public Logger logger();
+
+   @Override
+   public Object clone() throws CloneNotSupportedException
+   //--------------------------------------------------------
    {
-      return EXTENSIONS;
+      Indexer klone = (Indexer) super.clone();
+      return klone;
    }
-   
+
+   @Override public String[] supportedFileTypes() { return EXTENSIONS;  }
+
+   @Override
    public boolean supportsFileType(String ext)
    //-----------------------------------------------
    {
@@ -65,6 +69,7 @@ abstract public class Indexer implements Indexable, Cloneable
       return false;
    }
    
+   @Override
    public void setIndexWriter(IndexWriter indexWriter)
    //------------------------------------------------
    {
@@ -72,15 +77,8 @@ abstract public class Indexer implements Indexable, Cloneable
    }
    
    public IndexWriter getIndexWriter() { return m_indexWriter; }
-   
-   protected Object clone() throws CloneNotSupportedException
-   //--------------------------------------------------------
-   {
-      Indexer klone = (Indexer) super.clone();
-      klone.m_indexWriter = m_indexWriter;
-      return klone;
-   }
 
+   @Override
    public Object getData(InputStream is, String href, String fullPath, 
                          StringBuffer title, StringBuffer body)
    //--------------------------------------------------------------------
@@ -113,10 +111,7 @@ abstract public class Indexer implements Indexable, Cloneable
       }
       catch (Exception e)
       {
-         if (logger != null)
-            logger.error("Reading document data " + fullPath, e);
-         else
-            e.printStackTrace(System.err);
+         logger().error("Reading document data " + fullPath, e);
          return null;
       }
       finally
@@ -131,6 +126,7 @@ abstract public class Indexer implements Indexable, Cloneable
    /*
     * Defaults to text indexer
     */ 
+   @Override
    public long index(String href, String fullPath, boolean followLinks,
                      Object... extraParams) throws IOException
    //------------------------------------------------------------------
@@ -166,10 +162,7 @@ abstract public class Indexer implements Indexable, Cloneable
       }
       catch (Exception e)
       {
-         if (logger != null)
-            logger.error("Indexing document " + fullPath, e);
-         else
-            e.printStackTrace(System.err);
+         logger().error("Indexing document " + fullPath, e);
          return -1;
       }
 
@@ -185,11 +178,7 @@ abstract public class Indexer implements Indexable, Cloneable
       }
       catch (Exception e)
       {                  
-         if (logger != null)
-            logger.error(this.getClass().getName() + 
-                         ": Error adding Lucene Document.", e);
-         else
-            e.printStackTrace(System.err);
+         logger().error("Error adding Lucene Document.", e);
       }
       finally
       {

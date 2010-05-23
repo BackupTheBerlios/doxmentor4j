@@ -1,0 +1,11 @@
+net.homeip.donaldm.doxmentor4j.indexers.HTMLIndexer
+net.homeip.donaldm.doxmentor4j.indexers.TxtIndexer
+net.homeip.donaldm.doxmentor4j.indexers.PDFIndexer
+net.homeip.donaldm.doxmentor4j.indexers.CHMIndexer
+net.homeip.donaldm.doxmentor4j.indexers.DjvuIndexer
+net.homeip.donaldm.doxmentor4j.indexers.CIndexer
+net.homeip.donaldm.doxmentor4j.indexers.CppIndexer
+net.homeip.donaldm.doxmentor4j.indexers.JavaIndexer
+net.homeip.donaldm.doxmentor4j.indexers.PhpIndexer
+net.homeip.donaldm.doxmentor4j.indexers.PyIndexer
+net.homeip.donaldm.doxmentor4j.indexers.RubyIndexer

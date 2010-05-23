@@ -38,6 +38,8 @@ import org.slf4j.LoggerFactory;
 public class AjaxNodeHandler implements Postable
 //==============================================     
 {
+   final static private Logger logger = LoggerFactory.getLogger(AjaxNodeHandler.class);
+
    private final int UNKNOWN= 0;
    private final int LEAF = 1;
    private final int NODE = 2;
@@ -53,8 +55,6 @@ public class AjaxNodeHandler implements Postable
    private java.io.File m_archiveFile = null;
    
    private String m_archiveDir = null;   
-
-   private Logger logger = LoggerFactory.getLogger("net.homeip.donaldm.doxmentor4j");         
    
    public AjaxNodeHandler()
    //----------------------
@@ -66,6 +66,7 @@ public class AjaxNodeHandler implements Postable
       m_homeDir = app.getHomeDir();
    }
    
+   @Override
    public Object onHandlePost(long id, HttpExchange ex, Request request,
            HttpResponse r, java.io.File docsDir,
            Object... extraParameters)
@@ -115,10 +116,7 @@ public class AjaxNodeHandler implements Postable
       }
       catch (Exception e)
       {
-         if (logger != null)
-            logger.error(e.getMessage(), e);
-         else
-            e.printStackTrace(System.err);
+        logger.error(e.getMessage(), e);
       }
       if (req == null)
          return null;
@@ -137,10 +135,7 @@ public class AjaxNodeHandler implements Postable
       }
       catch (Exception e)
       {
-         if (logger != null)
-            logger.error(e.getMessage(), e);
-         else
-            e.printStackTrace(System.err);
+         logger.error(e.getMessage(), e);
          html = "<li>Error generating content " + e.getMessage() + "</li>";
       }
       r.setBody(html);
@@ -193,10 +188,7 @@ public class AjaxNodeHandler implements Postable
       }
       catch (Exception e)
       {
-         if (logger != null)
-            logger.error(e.getMessage(), e);
-         else
-            e.printStackTrace(System.err);
+         logger.error(e.getMessage(), e);
       }
       finally
       {

@@ -3,18 +3,23 @@
 	<classpathentry excluding="resources/htdocs/library/*" kind="src" path="src"/>
 	<classpathentry kind="src" path="test"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/HttpdBase4J"/>
-	<classpathentry kind="lib" path="/user/src/Java/DoxMentor4J/lib/FontBox-0.1.0-dev.jar"/>
-	<classpathentry kind="lib" path="/user/src/Java/DoxMentor4J/lib/PDFBox-0.7.3.jar"/>
-	<classpathentry kind="lib" path="/user/src/Java/DoxMentor4J/lib/ant.jar"/>
-	<classpathentry kind="lib" path="/user/src/Java/DoxMentor4J/lib/antlr-2.7.7.jar"/>
-	<classpathentry kind="lib" path="/user/src/Java/DoxMentor4J/lib/chardet.jar"/>
-	<classpathentry kind="lib" path="/user/src/Java/DoxMentor4J/lib/jericho-html-2.4.jar"/>
-	<classpathentry kind="lib" path="/user/src/Java/DoxMentor4J/lib/logback-classic-0.9.7.jar"/>
-	<classpathentry kind="lib" path="/user/src/Java/DoxMentor4J/lib/logback-core-0.9.7.jar"/>
-	<classpathentry kind="lib" path="/user/src/Java/DoxMentor4J/lib/lucene-core-2.2.0.jar"/>
-	<classpathentry kind="lib" path="/user/src/Java/DoxMentor4J/lib/slf4j-api-1.4.0.jar"/>
-	<classpathentry kind="lib" path="/user/src/Java/DoxMentor4J/lib/stringtemplate.jar"/>
-	<classpathentry kind="lib" path="/user/src/Java/DoxMentor4J/lib/truezip-6.jar"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/httpdbase4j"/>
+	<classpathentry kind="lib" path="lib/logging/logback-classic-0.9.21.jar"/>
+	<classpathentry kind="lib" path="lib/logging/logback-core-0.9.21.jar"/>
+	<classpathentry kind="lib" path="lib/logging/slf4j-api-1.6.0.jar"/>
+	<classpathentry kind="lib" path="lib/lucene/lucene-core-2.9.2.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:platform:/resource/doxmentor4j/lib/lucene/lucene-javadoc.zip!/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="lib/ant.jar"/>
+	<classpathentry kind="lib" path="lib/antlr-2.7.7.jar"/>
+	<classpathentry kind="lib" path="lib/chardet.jar"/>
+	<classpathentry kind="lib" path="lib/FontBox-0.1.0-dev.jar"/>
+	<classpathentry kind="lib" path="lib/jericho-html-2.4.jar"/>
+	<classpathentry kind="lib" path="lib/org-openide-util-lookup.jar"/>
+	<classpathentry kind="lib" path="lib/PDFBox-0.7.3.jar"/>
+	<classpathentry kind="lib" path="lib/stringtemplate.jar"/>
+	<classpathentry kind="lib" path="lib/truezip-6.jar"/>
 	<classpathentry kind="output" path="build/classes"/>
 </classpath>

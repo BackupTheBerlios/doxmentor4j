@@ -14,6 +14,7 @@
 package net.homeip.donaldm.doxmentor4j.indexers;
 
 
+import net.homeip.donaldm.doxmentor4j.indexers.spi.Indexable;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -21,6 +22,8 @@ import java.io.InputStreamReader;
 
 import net.homeip.donaldm.doxmentor4j.Utils;
 import de.schlichtherle.io.File;
+import net.homeip.donaldm.httpdbase4j.Http;
+import net.homeip.donaldm.httpdbase4j.Httpd;
 
 /**
  * A base class for indexers using command line programs to extract 
@@ -41,12 +44,10 @@ abstract public class CommandLineIndexer extends Indexer
    protected Indexable m_indexor = null;
    
    protected boolean m_isfollowLinks = false;
-   
-   public CommandLineIndexer()
-   //-------------------------
-   {
-      
-   }
+
+   abstract protected boolean getExtractor();
+
+   public CommandLineIndexer() { }
    
    public CommandLineIndexer(String extractorPath, Indexable indexor)
    //-------------------------------------------------------
@@ -99,6 +100,7 @@ abstract public class CommandLineIndexer extends Indexer
       m_indexor = indexer;
    }
    
+   @Override
    public Object getData(InputStream is, String href, String fullPath, 
                          StringBuffer title, StringBuffer body)
    //--------------------------------------------------------------------
@@ -112,20 +114,21 @@ abstract public class CommandLineIndexer extends Indexer
          return "";
    }
    
+   @Override
    public long index(String href, String fullPath, boolean followLinks,
                      Object... extraParams) throws IOException
    //------------------------------------------------------------------
    {
+      if (m_extractorPath == null)
+         getExtractor();
       if ( (m_extractorPath == null) || (! new File(m_extractorPath).exists()) )
       {
-         System.err.println("Extract program executable not set: " + 
-                            this.getClass().getName());
+         logger().error("Extract program executable not set or could not be found");
          return -1;
       }         
       if (m_indexWriter == null)
       {
-         System.err.println("CLIndexer: index writer is null: " + 
-                            this.getClass().getName());
+         logger().error("Index writer is null");
          return -1;
       }
       if (m_indexor == null)
@@ -172,12 +175,9 @@ abstract public class CommandLineIndexer extends Indexer
       if ( ((tmpFileOut.isDirectory()) && (tmpFileOut.list().length == 0)) ||
            (! tmpFileOut.exists()) )
       {
-         System.err.println(command + " failed:");
-         System.err.println("Status = " + status);
-         System.err.println(output.toString());
-         System.err.println(error.toString());         
-         return -1;
-         
+         logger().error(command + " failed: Status = " + status + " output: " +
+                        output.toString() + Httpd.EOL + error.toString());
+         return -1;         
       }
       
       if (! tmpFileOut.isDirectory())
@@ -245,13 +245,11 @@ abstract public class CommandLineIndexer extends Indexer
       return status;
    }
    
-   protected Object clone() throws CloneNotSupportedException
+   @Override
+   public Object clone() throws CloneNotSupportedException
    //--------------------------------------------------------
    {
       CommandLineIndexer klone = (CommandLineIndexer) super.clone();
-      klone.m_extractorPath = m_extractorPath;
-      klone.m_indexor = m_indexor;
-      klone.m_isfollowLinks = m_isfollowLinks;
       return klone;
    }
    
