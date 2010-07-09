@@ -7,8 +7,8 @@
 <meta http-equiv="content-type" content="text/html; charset=UTF-8">
 <meta http-equiv="content-type" content="application/xhtml+xml; charset=UTF-8">
 <meta http-equiv="content-style-type" content="text/css">
-<link rel="stylesheet" type="text/css" media="all" href="main.css" > </link>
-<link rel="stylesheet" type="text/css" media="all" href="css-tables.css" > </link>
+<link rel="stylesheet" type="text/css" media="all" href="main.css" />
+<link rel="stylesheet" type="text/css" media="all" href="css-tables.css" />
 </head>
 <body>
 <h1>
@@ -71,7 +71,11 @@ DoxMentor4J supports the following properties:
    <tr>      
       <td>archiveindexdir</td>      
       <td> Specifies the directory within the archive where the Lucene search index is stored.</td>   
-   </tr>
+	</tr>
+	<tr>
+      <td>timeout</td>
+      <td> Specifies the indexing timeout in minutes (default 10).</td>
+	</tr>
    <tr>      
       <td>chmext=path</td>           
       <td>
@@ -84,7 +88,8 @@ DoxMentor4J supports the following properties:
       <td>chmargs=args</td>      
       <td>
          <p> 
-            Specifies the arguments to send to the chmext executable specified above Use the following substitution strings: %s = source file, %d = destination file %D = destination directory.
+            Specifies the arguments to send to the chmext executable specified above
+            Use the following substitution strings: %s = source file, %d = destination file %D = destination directory.
          </p>
       </td>   
    </tr>
@@ -92,7 +97,8 @@ DoxMentor4J supports the following properties:
       <td>djvuext=path</td>      
       <td>
          <p>      
-            Specifies the full path to the executable to be used to extract text files from a .djvu file. If not specified then the DjvuIndexer constructor will attempt to find such an executable (On Windows it will attempt to find djvutxt.exe and in Linux it will search for djvutxt)
+            Specifies the full path to the executable to be used to extract text files from a .djvu file. 
+            If not specified then an internal native Java DJVU extractor will be used (new in 0.3).
          </p>
       </td>   
    </tr>
@@ -100,7 +106,8 @@ DoxMentor4J supports the following properties:
       <td>djvuargs=args</td>      
       <td>
          <p>      
-            Specifies the arguments to send to the djvuext executable specified above Use the following substitution strings: %s = source file, %d = destination file %D = destination directory.
+            Specifies the arguments to send to the djvuext executable specified above
+            Use the following substitution strings: %s = source file, %d = destination file %D = destination directory.
          </p>
       </td>   
    </tr>

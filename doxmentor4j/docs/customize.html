@@ -60,7 +60,8 @@ view->href="content anchor",description="description",dir=yes|no,
 <b>href</b> specifies the link to the content document (which can be any format for which your
 browser has a mime type mapping to an application although currently only txt,html,pdf, 
 djvu and chm can be indexed (specified using search). The href should prefarably be
-relative to the current (leaf) directory. eg view->href=html/index.htm
+relative to the current (leaf) directory. eg view->href=html/index.htm. The href can
+also be a remote URL.
 </li>
 <li>
 <b>description</b> is the text which will be displayed in the browser tree for this
@@ -81,6 +82,10 @@ document specified in href (including other non-html but supported types).
 If search=[list of space separated files] eg search=[book.html api.html] 
 or search=[wildcard] eg search=[html/*.html] then the files referenced in the
 list will be indexed for searching."
+Remote URL will also be indexed where possible although this may be slower than
+indexing local files. Indexing may not be possible for all file types. Currently
+html and the internal DoxMentor4J pdf and djvu parsers support url indexing but
+the default command line pdf and djvu do not.
 </li>
 <li>
 <b>target</b> specifies the target to use in the html anchor for this view. 
@@ -118,6 +123,14 @@ document (index.html).
 <span>view -> href="index.html", description="View as HTML",search="links"</span>
 <span>view->href="index.html", description="HTML in another window",search="no",target="displaywin"</span>
 </pre>
+<p>
+   A remote web site that can be indexed (note this could make indexing slow depending on the speed
+   of the Internet connection).
+   <pre>
+      <span>name->Remote HTTP Dive into Python</span>
+      <span>view->href="http://diveintopython.org/toc/index.html", description="Dive into Python",search="links"</span>
+   </pre>
+</p>
 <a name="filesys"><h2>Content on File System</h2></a>
 <p>
 To create the content on a local file system copy the base contents from
@@ -173,7 +186,7 @@ as it will work in all operating systems)
 <p>
 Create the content in a file system sub-directory as described in
 <a href="#filesys"> Content on File System</a> above. Then archive it
-using the appropriate archival tool. 
+using the appropriate archival tool eg zip -r content.zip resources/
 </p> 
 <p>
 Before starting DoxMentor you will have to tell DoxMentor that you 
@@ -187,18 +200,14 @@ this. The default startup properties file should be named
 </p>
 <p>
 <a name="crindex"><h3>Creating an Archive Index</h3></a>
+<p>
 If you wish to use full text search and have the search index stored
-in the archive then you will need to create the index while the content
-is located in the file system before archiving it. To do this create the 
-content in a directory as described above for 
-<a href="#filesys">content in a file system</a>. For example using a 
-directory named resources in the DoxMentor4J directory, place the base in 
-resources/htdocs with the contents in resources/htdocs/library. Then
-create a properties file, for example doxmentor4j.properties with the 
-<i>home</i> and <i>archiveindexdir</i> properties as relative directories, 
-<b>don't use an absolute directory specification or it won't work in the 
-archive.</b>.
-<h4>Example Archival index</h4>
+in the archive then you can either create the index while the content
+is located in the file system before archiving it and disallow indexing in the archive LEAF files
+or allow the user to create the index via the ReIndex button in which case the index will be created
+in a temporary directory and copied into the archive after indexing.
+</p>
+<h4>Example: Pre-create Archival index</h4>
 <p>
 Create the content in DoxMentor4J/resources/htdocs (where DoxMentor4J
 is the base DoxMentor4J working directory). To specify the index to be 
@@ -212,8 +221,8 @@ properties file:
 <p>
 Start DoxMentor4J and click the ReIndex button to create the indices.
 Stop DoxMentor4J; you should now have the indices created in
-directory DoxMentor4J/resources/index. Now archive the content 
-(this example uses zip; but jar, tar, tar.gz and tar.bz2 are also supported):
+directory DoxMentor4J/resources/index. Now archive the content after optionally changing the LEAF
+nodes to disallow re-indexing
 </p>
 <pre>
 <span>zip -r content resources/ -i \*</span>

@@ -53,7 +53,9 @@ DoxMentor4J also supports full text indexing and searching of content using the
 Lucene library. Content indexing may be enabled/disabled on a node by node
 basis. Search indices can be accessed inside an archive or on cd/dvd. The 
 indexing code currently supports text, html, pdf, chm<sup>[1]</sup> and 
-djvu<sup>[2]</sup>.
+djvu. There are native indexers supplied for pdf and djvu files or alternately
+a command line program to extract text from these files can be supplied in the
+<a href="properties.html">properties file</a>.
 </p>
 <p>
 <a href="properties.html">The DoxMentor4J properties file</a> describes the 
@@ -304,10 +306,6 @@ required for extraction) to Java at a later date.
 </font>
 </p>   
 <p>
-<font size="-1">
-<b>[2]</b> - Currently requires external program to extract text from 
-the djvu file. Not all djvu files contain extractable text.
-</font>
 </p>
 
 <hr>
