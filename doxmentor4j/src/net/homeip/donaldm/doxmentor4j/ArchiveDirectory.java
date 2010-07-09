@@ -2,6 +2,7 @@ package net.homeip.donaldm.doxmentor4j;
 
 import de.schlichtherle.io.File;
 import java.io.IOException;
+import java.security.MessageDigest;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.store.IndexInput;
@@ -18,40 +19,39 @@ import org.apache.lucene.store.SimpleFSLockFactory;
  * will be lost in the event of a crash.
  * @author Donald Munro
  */
-public class ArchiveDirectory extends FSDirectory
+public class ArchiveDirectory extends Directory
 //---------------------------------------------
 {
    protected File                      m_archiveDir = null;
-   protected File                      m_tempDirectory = null;
+   protected java.io.File              mTempDirectory = null;
    protected boolean                   m_updated = false;
    protected boolean                   m_isReadOnly = false;
    
-   private FSDirectory                 m_directory = null;
+   private FSDirectory                 mLuceneDirectory = null;
    private SimpleFSLockFactory         m_lockFactory = null;
    
-   private ArchiveDirectory(java.io.File archiveFile) throws IOException
+   private ArchiveDirectory(java.io.File archiveFile, boolean isCreate) throws IOException
    //-------------------------------------------------------------------
    {
       m_archiveDir = new File(archiveFile);
-      _copyToTemp();
-      m_lockFactory = new SimpleFSLockFactory(m_tempDirectory);
-      m_directory =  FSDirectory.getDirectory(m_tempDirectory, m_lockFactory);
+      _copyToTemp(archiveFile, isCreate);
+      m_lockFactory = new SimpleFSLockFactory(mTempDirectory);
+      mLuceneDirectory =  FSDirectory.open(mTempDirectory, m_lockFactory);
    }
    
-   private ArchiveDirectory(java.io.File archiveFile, String archiveDir)
+   private ArchiveDirectory(java.io.File archiveFile, String archiveDir, boolean isCreate)
           throws IOException
    //------------------------------------------------------------------
    {
       m_archiveDir = new File(archiveFile, archiveDir);
-      _copyToTemp();
-      m_lockFactory = new SimpleFSLockFactory(m_tempDirectory);
-      m_directory =  FSDirectory.getDirectory(m_tempDirectory, m_lockFactory);
+      _copyToTemp(archiveFile, isCreate);
+      m_lockFactory = new SimpleFSLockFactory(mTempDirectory);
+      mLuceneDirectory =  FSDirectory.open(mTempDirectory, m_lockFactory);
    }
    
-   public static Directory getDirectory(java.io.File archiveFile,
-                                               String archiveDir)
+   public static Directory getDirectory(java.io.File archiveFile, String archiveDir, boolean isCreate)
                  throws IOException                              
-   //-------------------------------------------------------------------
+   //------------------------------------------------------------------------------------------------
    {
       if ( (archiveFile == null) || (! archiveFile.exists()) || 
            (! archiveFile.canRead()) || (! archiveFile.canWrite()) )
@@ -59,38 +59,31 @@ public class ArchiveDirectory extends FSDirectory
                                                 : archiveFile.getAbsolutePath())
                                + "for reading and writing");
       if (archiveDir == null)
-         return new ArchiveDirectory(archiveFile);
+         return new ArchiveDirectory(archiveFile, isCreate);
       else
-         return new ArchiveDirectory(archiveFile, archiveDir);      
+         return new ArchiveDirectory(archiveFile, archiveDir, isCreate);
       
       
    }   
    
-   public File getTempDirectory() { return m_tempDirectory; }
+   public java.io.File getTempDirectory() { return mTempDirectory; }
    
    public void setReadOnly(boolean b) { m_isReadOnly = b; }
    
    public boolean getReadOnly() { return m_isReadOnly; }
-   
-   @Override
-   public String[] list() 
-   //--------------------
-   {      
-      return m_directory.list();
-   }
-   
+      
    @Override
    public boolean fileExists(String fileName)
    //-----------------------------------------
    {
-      return m_directory.fileExists(fileName);
+      return mLuceneDirectory.fileExists(fileName);
    }
    
    @Override
    public long fileModified(String fileName)
    //---------------------------------------
    {
-      return m_directory.fileModified(fileName);
+      return mLuceneDirectory.fileModified(fileName);
    }
    
    @Override
@@ -99,7 +92,7 @@ public class ArchiveDirectory extends FSDirectory
    {
       if (m_isReadOnly) 
          return;
-      m_directory.touchFile(fileName);
+      mLuceneDirectory.touchFile(fileName);
    }
    
    @Override
@@ -109,25 +102,14 @@ public class ArchiveDirectory extends FSDirectory
       if (m_isReadOnly) 
          throw new IOException("Read only Directory");
       m_updated = true;
-      m_directory.deleteFile(fileName);
+      mLuceneDirectory.deleteFile(fileName);
    }
-   
-   @SuppressWarnings("deprecation")
-   @Override
-   public synchronized void renameFile(String from, String to) throws IOException
-   //----------------------------------------------------------------------------
-   {
-      if (m_isReadOnly) 
-         throw new IOException("Read only Directory");
-      m_updated = true;
-      m_directory.renameFile(from, to);
-   }
-   
+      
    @Override
    public long fileLength(String fileName)
    //-------------------------------------
    {
-      return m_directory.fileLength(fileName);
+      return mLuceneDirectory.fileLength(fileName);
    }
    
    @Override
@@ -137,7 +119,7 @@ public class ArchiveDirectory extends FSDirectory
       if (m_isReadOnly) 
          throw new IOException("Read only Directory");
       m_updated = true;
-      return m_directory.createOutput(fileName);
+      return mLuceneDirectory.createOutput(fileName);
    }
    
    @Override
@@ -147,53 +129,45 @@ public class ArchiveDirectory extends FSDirectory
       if (m_isReadOnly) 
          throw new IOException("Read only Directory");
       m_updated = true;
-      return m_directory.openInput(fileName);
+      return mLuceneDirectory.openInput(fileName);
    }
 
    @Override
    public IndexInput openInput(String arg0, int arg1) throws IOException
    //-------------------------------------------------------------------
    {
-       return m_directory.openInput(arg0, arg1);
+       return mLuceneDirectory.openInput(arg0, arg1);
    }
 
    @Override
    public String getLockID()
    //-----------------------
    {
-       return m_directory.getLockID();
+       return mLuceneDirectory.getLockID();
    }
 
    @Override
-   public java.io.File getFile()
-   //---------------------------
+   public String[] listAll() throws IOException
+   //------------------------------------------
    {
-       return m_directory.getFile();
+      return mLuceneDirectory.listAll();
    }
+
+
 
    @Override
    public String toString()
-   //----------------------
    {
-      StringBuffer sb = new StringBuffer();
-      sb.append(m_directory.toString());
-      sb.append(System.getProperty("line.separator"));
-      sb.append("Archive Directory: ");
-      sb.append(m_archiveDir.getAbsolutePath());
-      sb.append(System.getProperty("line.separator"));
-      sb.append("Temporary Directory: ");
-      sb.append(m_tempDirectory.getAbsolutePath());
-      sb.append(System.getProperty("line.separator"));
-      sb.append("Updated: ");
-      sb.append(m_updated);
-      return sb.toString();
+      return "ArchiveDirectory{" + "archiveDir=" + m_archiveDir +
+             ", tempDirectory=" + mTempDirectory + ", updated=" + m_updated +
+             ", isReadOnly=" + m_isReadOnly + '}';
    }
    
    @Override
    public void close()
    //-----------------
    {
-      m_directory.close();
+      mLuceneDirectory.close();
       if (m_updated)
       {
          try  
@@ -223,23 +197,44 @@ public class ArchiveDirectory extends FSDirectory
          m_lockFactory.clearLock(name);
    }
 
-   
-   private void _copyToTemp() throws IOException
-   //-------------------------------------------
+   public static java.io.File tempDir(java.io.File archiveFile, boolean isCreate)
+   //----------------------------------------------------------------------------
    {
-      File tmp = new File(File.createTempFile("TMPDIR", ".tmp"));
-      tmp.delete();
-      tmp.deleteAll();
-      tmp.mkdirs();
-      m_tempDirectory = tmp;
-      if ( (! m_tempDirectory.exists()) || (! m_tempDirectory.isDirectory()) )
+      MessageDigest md5 = null;
+      String filename;
+      try
+      {  md5 = MessageDigest.getInstance("MD5");
+         md5.update(archiveFile.getName().getBytes());
+         filename = Utils.bytesToBinHex(md5.digest());
+      }
+      catch (Exception e)
+      {
+         filename = archiveFile.getName() + ".tmp";
+      }
+         
+      java.io.File tmp = new java.io.File(System.getProperty("java.io.tmpdir", "."));
+      java.io.File tmpDir = new java.io.File(tmp, filename);
+      if (tmpDir.isFile())
+         tmpDir.delete();
+      if ( (tmpDir.isDirectory()) && (isCreate) )
+         Utils.deleteDir(tmpDir);
+      tmpDir.mkdirs();
+      return tmpDir;
+   }
+
+   private void _copyToTemp(java.io.File archiveFile, boolean isCreate) throws IOException
+   //--------------------------------------------------------------------------------------
+   {
+      java.io.File tmpDir = tempDir(archiveFile, isCreate);
+      mTempDirectory = tmpDir;
+      if ( (! mTempDirectory.exists()) || (! mTempDirectory.isDirectory()) )
          throw new IOException("Error creating temporary directory " + 
-                               m_tempDirectory.getAbsolutePath());
-      if (! m_archiveDir.archiveCopyAllTo(m_tempDirectory))
+                               mTempDirectory.getAbsolutePath());
+      if ( (isCreate) && (! m_archiveDir.archiveCopyAllTo(mTempDirectory)) )
          throw new IOException("Error copying content from archive directory " +
                                m_archiveDir.getAbsolutePath() + 
                                " to temporary directory " + 
-                               m_tempDirectory.getAbsolutePath());
+                               mTempDirectory.getAbsolutePath());
               
       
    }
@@ -247,9 +242,9 @@ public class ArchiveDirectory extends FSDirectory
    private void _copyFromTemp() throws IOException
    //--------------------------
    {
-      if (! m_archiveDir.archiveCopyAllFrom(m_tempDirectory))
+      if (! m_archiveDir.archiveCopyAllFrom(mTempDirectory))
          throw new IOException("Error copying content from temp directory " +
-                               m_tempDirectory.getAbsolutePath() + 
+                               mTempDirectory.getAbsolutePath() +
                                " to archive directory " + 
                                m_archiveDir.getAbsolutePath());
                                

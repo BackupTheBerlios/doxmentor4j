@@ -13,6 +13,7 @@
 
 package net.homeip.donaldm.doxmentor4j.indexers;
 
+import java.util.HashMap;
 import net.homeip.donaldm.doxmentor4j.indexers.spi.Indexable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,7 +38,11 @@ public class PyIndexer extends SourceIndexer implements Indexable, Cloneable
    //---------------
    {
       // Allows .h files to be indexed with CppIndexer
-      EXTENSIONS = new String[] { "py", "python" }; 
+      m_extensions = new HashMap<String, Void>()
+      {{
+          put("py", null );
+          put("python", null);
+      }};
    }
 
    @Override public String[] getLanguageStopWords()

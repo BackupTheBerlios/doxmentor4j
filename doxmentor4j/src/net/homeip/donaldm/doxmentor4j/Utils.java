@@ -15,6 +15,7 @@ package net.homeip.donaldm.doxmentor4j;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -76,7 +77,7 @@ public class Utils
       return(s.toString());
    }
    
-   static private Pattern m_extPattern = Pattern.compile(".+\\.(.+)$");
+   static private Pattern EXTENSION_PATTERN = Pattern.compile(".+\\.(.+)$");
    
    public static String getExtension(String path)
    //--------------------------------------------
@@ -91,7 +92,7 @@ public class Utils
          p = path.indexOf("&");  
       if (p > 0)
          path = path.substring(0, p);
-      Matcher matcher = m_extPattern.matcher(path);
+      Matcher matcher = EXTENSION_PATTERN.matcher(path);
       String ext = "";
       if (matcher.matches())
          ext = matcher.group(1);
@@ -147,37 +148,138 @@ public class Utils
       return startsWithIgnoreCase(string, substring, 0);
    }
 
-   private static File _getLogDir(File logDir)
-   //-----------------------------------------
+   public static String uriName(URI uri)
+   //-----------------------------------
    {
-      String logFileName = "DoxMentor4J.log";
-      File logFile = null;
-      if (logDir == null)
-         logDir = new File(".");
-      if (! logDir.exists())
-         logDir.mkdirs();
-      if (logDir.exists())
-         logFile = new File(logDir, logFileName);
+      String path = uri.getPath();
+      if (path == null)
+         return null;
+      int slash = path.lastIndexOf('/');
+      if (slash >= 0)
+         return path.substring(slash+1);
       else
-      {
-         logDir = new File(".");
-         logFile = new File(logFileName);
-      }
-      boolean isCreate = false;
-      if (! logFile.exists())
-      {
-         try { logFile.createNewFile(); } catch (Exception e) {}
-         isCreate = true;
-      }
-      if (! logFile.canWrite())
-      {
-         File tmpDir = new File(System.getProperty("java.io.tmpdir"));
-         logDir = new File(tmpDir, "DoxMentor4J-Log");
-         logFile = new File(logDir, logFileName);
-         System.out.println("Logging to " + logDir.getAbsolutePath());
-      }          
-      if (isCreate)
-         logFile.delete();
-      return logDir;
+         return path;
    }
+
+   /**
+    * Converts a uri to a zip archive to a TrueZip File. Always returns the innermost
+    * zip file ie if there are zip files inside zip files the innermost one is returned
+    * @param uri The uri to convert
+    * @return A truezip de.schlichtherle.io.File of the innermost zip archive or null if url
+    * does not reference a zip archive.
+    */
+   public static de.schlichtherle.io.File uri2Archive(URI uri)
+   //---------------------------------------------------------
+   {
+      de.schlichtherle.io.File archive = null, f = null;
+      String s = uri.getPath();
+      int p = s.toLowerCase().indexOf(".zip");
+      while (p >= 0)
+      {
+         p = p + 4;
+         if (archive == null)
+            archive = new de.schlichtherle.io.File(s.substring(0, p));
+         else
+            archive = new de.schlichtherle.io.File(archive, s.substring(0, p));
+         if (s.length() >= (p+2))
+         {
+            s = s.substring(p+1);
+            f = new de.schlichtherle.io.File(archive, s);
+         }
+         else
+            s = "";
+         p = s.toLowerCase().indexOf(".zip");
+      }
+      return f;
+   }
+
+   static public java.io.File uri2File(URI uri)
+   //---------------------------------------------
+   {
+      java.io.File tmpFile = null;
+      String ext;
+      try { ext = "." + getExtension(uriName(uri)); } catch (Exception _e) { ext = ".tmp"; }
+      try { tmpFile = java.io.File.createTempFile("tmp", ext); } catch (IOException e) { tmpFile = new File(uriName(uri) + ext); }
+      tmpFile.delete();
+      String scheme = uri.getScheme();
+      if ( (scheme == null) || (scheme.equalsIgnoreCase("file")) )
+      {
+         de.schlichtherle.io.File f = uri2Archive(uri);
+         if (f != null)
+         {
+            f.copyTo(tmpFile);
+            tmpFile.deleteOnExit();
+            return tmpFile;
+         }
+         else
+         {
+            f = new de.schlichtherle.io.File(uri.getPath());
+            return f;
+         }
+//         f.isArchive(); f.isDirectory();
+//         if (f.isEntry())
+//         {
+//
+//            f.copyTo(tmpPdf);
+//            return tmpPdf;
+//         }
+//         else
+//            return f;
+      }
+      else
+         return null;
+   }
+
+   static public String getRelativePath(String basePath, String fullPath)
+   //-------------------------------------------------------------------
+   {
+      int p = fullPath.indexOf(basePath);
+      if (p >= 0)
+         fullPath = fullPath.substring(p+basePath.length());
+      if ( (fullPath.startsWith("/")) || (fullPath.startsWith(File.separator)) )
+      {
+         if (fullPath.length() > 1)
+            fullPath = fullPath.substring(1);
+      }
+      return fullPath;
+   }
+
+   public static File canonizeFile(final java.io.File f)
+   //---------------------------------------------------
+   {
+      File ff = null;
+      try
+      {
+         ff = f.getCanonicalFile();
+      }
+      catch (Exception e)
+      {
+         ff = f.getAbsoluteFile();
+      }
+      return ff;
+   }
+
+   final static char[] HEXTAB = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+                                  'A', 'B', 'C', 'D', 'E', 'F' };
+
+   public static String bytesToBinHex(byte[] data) { return bytesToBinHex(data, 0, data.length); }
+
+   public static String bytesToBinHex(byte[] data, int offset, int len)
+   //------------------------------------------------------------------
+   {
+      StringBuilder sbuf = new StringBuilder();
+      sbuf.setLength(len << 1);
+
+      int nPos = 0;
+
+      int nC = offset + len;
+
+      while (offset < nC)
+      {
+         sbuf.setCharAt(nPos++, HEXTAB[(data[offset] >> 4) & 0x0f]);
+         sbuf.setCharAt(nPos++, HEXTAB[data[offset++] & 0x0f]);
+      }
+      return sbuf.toString();
+   }
+
 }

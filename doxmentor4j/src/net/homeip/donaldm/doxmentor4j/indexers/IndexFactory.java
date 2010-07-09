@@ -17,13 +17,14 @@ import net.homeip.donaldm.doxmentor4j.indexers.spi.Indexable;
 import java.io.File;
 import java.io.IOException;
 import net.homeip.donaldm.doxmentor4j.ArchiveDirectory;
-import net.homeip.donaldm.doxmentor4j.Utils;
+import net.homeip.donaldm.doxmentor4j.DoxMentor4J;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 
+import org.apache.lucene.store.NoLockFactory;
 import org.openide.util.Lookup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,9 +41,11 @@ public class IndexFactory
       static final IndexFactory singleton = new IndexFactory();      
    }
 
-   protected static Directory m_directory = null;
+   protected static Directory mLuceneDirectory = null;
 
-   protected static Analyzer m_analyzer = new StandardAnalyzer();
+   protected static File mDirectory = null;
+
+   protected static Analyzer m_analyzer = new StandardAnalyzer(DoxMentor4J.LUCENE_VERSION);
    
    protected static IndexWriter m_indexWriter = null;
         
@@ -57,11 +60,13 @@ public class IndexFactory
    {       
    }
 
-   public static Directory getDirectory() { return m_directory; }
+   public static Directory getDirectory() { return mLuceneDirectory; }
 
    public Indexable getIndexer(String extension)
    //-------------------------------------------
    {
+     if ( (extension == null) || (extension.isEmpty()) )
+        return null;
       Lookup.Result<Indexable> indexors = Lookup.getDefault().lookupResult(Indexable.class);
       for (Indexable indexable : indexors.allInstances())
       {
@@ -95,7 +100,7 @@ public class IndexFactory
    //---------------------------------------------------------------------------
    {
       create(archiveFile, archiveIndexDirName, indexDirName, 
-             new StandardAnalyzer(), isCreate);
+             new StandardAnalyzer(DoxMentor4J.LUCENE_VERSION), isCreate);
    }
    
    static public void create(File archiveFile, String archiveIndexDirName, 
@@ -106,12 +111,19 @@ public class IndexFactory
    {
       if (m_indexWriter != null)
          try { m_indexWriter.close(); } catch (Exception e) {}
-      if (m_directory != null)
-         try { m_directory.close(); } catch (Exception e) {}
+      boolean isClosed = false;
+      if (mLuceneDirectory == null)
+         isClosed = true;
+      else
+         try { mLuceneDirectory.close(); isClosed = true; } catch (Exception e) {}
       m_analyzer = analyzer;
       if (archiveIndexDirName != null)
-         m_directory = ArchiveDirectory.getDirectory(archiveFile, 
-                                                     archiveIndexDirName);
+      {
+         if ( (! isClosed)  && (mLuceneDirectory != null) )
+            ((ArchiveDirectory) mLuceneDirectory).clearLock(IndexWriter.WRITE_LOCK_NAME);
+         mLuceneDirectory = ArchiveDirectory.getDirectory(archiveFile, archiveIndexDirName, isCreate);
+         mDirectory = ((ArchiveDirectory) mLuceneDirectory).getTempDirectory();
+      }
       else if (indexDirName != null)
       {
          java.io.File f = new File(indexDirName);
@@ -123,58 +135,80 @@ public class IndexFactory
          try { ff = File.createTempFile("tst", ".tmp", f); } catch (Exception _e) { ff = null; }
          if ( (ff == null) || (! ff.exists()) )
          {
-            System.out.println("Read-Only media for " + indexDirName +
-                               ". Disabling locks");
-            FSDirectory.setDisableLocks(true);
+            System.out.println("Read-Only media for " + indexDirName + ". Disabling locks");
+            logger.info("Read-Only media for " + indexDirName + ". Disabling locks");
+            if (isClosed)
+            {
+               mLuceneDirectory = FSDirectory.open(f, NoLockFactory.getNoLockFactory());
+               mDirectory = f;
+            }
          }
          else
          {
             if (ff != null)
                ff.delete();
+            if (isClosed)
+            {
+               mLuceneDirectory = FSDirectory.open(f);
+               mDirectory = f;
+            }
          }
-         m_directory = FSDirectory.getDirectory(indexDirName);
       }
       else
          throw new IOException("Index directory invalid");
-      m_indexWriter = new IndexWriter(m_directory, m_analyzer, isCreate);
+      m_indexWriter = new IndexWriter(mLuceneDirectory, m_analyzer, isCreate,
+                                      IndexWriter.MaxFieldLength.UNLIMITED);
    }      
    
-   static public void create(String indexDirName, boolean isCreate) 
-                 throws IOException
+   static public void create(String indexDirName, boolean isCreate) throws IOException
    //---------------------------------------------------------------------------
    {
-      create(indexDirName, new StandardAnalyzer(), isCreate);
+      create(indexDirName, new StandardAnalyzer(DoxMentor4J.LUCENE_VERSION), isCreate);
    }
    
-   static public void create(String indexDirName, Analyzer analyzer, 
-                             boolean isCreate) 
-                 throws IOException
+   static public void create(String indexDirName, Analyzer analyzer, boolean isCreate) 
+                      throws IOException
    //---------------------------------------------------------------------------
    {
       if (m_indexWriter != null)
-         try { m_indexWriter.close(); } catch (Exception e) {}
-      if (m_directory != null)
-         try { m_directory.close(); } catch (Exception e) {}
+         try { m_indexWriter.close(); } catch (Exception e) { logger.error("", e); }      
       m_analyzer = analyzer;
       java.io.File f = new File(indexDirName);
       if ( (f.exists()) && (! f.isDirectory()) )
          f.delete();
       if (! f.exists())
          f.mkdirs();
+      if (mLuceneDirectory != null)
+      {
+         if ( (mDirectory != null) && (! mDirectory.equals(f)) )
+         {
+            try { mLuceneDirectory.close(); } catch (Exception e) { logger.error("", e); }
+            mLuceneDirectory = null;
+         }
+      }
       File ff;
       try { ff = File.createTempFile("tst", ".tmp", f); } catch (Exception _e) { ff = null; }
       if ( (ff == null) || (! ff.exists()) )
       {
          logger.info("Read-Only media for " + indexDirName + ". Disabling locks");
-         FSDirectory.setDisableLocks(true);
+         if (mLuceneDirectory == null)
+         {
+            mLuceneDirectory = FSDirectory.open(f, NoLockFactory.getNoLockFactory());
+            mDirectory = f;
+         }
       }
       else
       {
          if (ff != null)
             ff.delete();
+         if (mLuceneDirectory == null)
+         {
+            mLuceneDirectory = FSDirectory.open(f);
+            mDirectory = f;
+         }
       }
-      m_directory = FSDirectory.getDirectory(indexDirName);      
-      m_indexWriter = new IndexWriter(m_directory, m_analyzer, isCreate);
+      m_indexWriter = new IndexWriter(mLuceneDirectory, m_analyzer, isCreate,
+                                      IndexWriter.MaxFieldLength.UNLIMITED);
    }      
 
    public static boolean optimizeWriter()
@@ -199,7 +233,7 @@ public class IndexFactory
       if (m_indexWriter == null) return false;
       try
       {
-         m_indexWriter.flush();
+         m_indexWriter.commit();
       }
       catch (Exception e)
       {
@@ -208,21 +242,21 @@ public class IndexFactory
       }
       return true;
    }
-   
+
    public static boolean closeWriter()
    //----------------------------------------------------
    { 
       if (m_indexWriter == null) return false;
       try
       {
-         m_indexWriter.close();         
+         m_indexWriter.close();
+         m_indexWriter = null;
       }
       catch (Exception e)
       {
          logger.error("Error closing Lucene index directory", e);
          return false;
-      }
-      m_indexWriter = null;
+      }      
       return true;
    }
    

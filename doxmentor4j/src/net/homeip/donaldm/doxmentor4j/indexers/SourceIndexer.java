@@ -26,30 +26,24 @@ import org.apache.lucene.store.Directory;
 /**
  * Abstract base class for indexers for indexing computer languages
  */
-abstract public class SourceIndexer extends Indexer implements Indexable, 
-                                                                 Cloneable
-//==========================================================================
+abstract public class SourceIndexer extends Indexer implements Indexable, Cloneable
+//=================================================================================
 {   
-   static protected boolean m_isUseSourceAnalyser = false;
+   static public boolean USE_SOURCE_ANALYZER = false;
 
-   public SourceIndexer()
-   //----------------------
-   {
-   }
-   
-   static public void setUserSourceAnalyzer(boolean b) { m_isUseSourceAnalyser = b; }
+   public SourceIndexer() { }
       
    @Override
    public void setIndexWriter(IndexWriter indexWriter)
    //-------------------------------------------------------
    {
-      if (! m_isUseSourceAnalyser)
+      if (! USE_SOURCE_ANALYZER)
       {
          super.setIndexWriter(null); // Don't index source on first pass
          return;
       }
       if ( (indexWriter == null) || (indexWriter.getAnalyzer() == null) || 
-           (!(indexWriter.getAnalyzer() instanceof  SourceCodeAnalyzer)) )
+           (! (indexWriter.getAnalyzer() instanceof SourceCodeAnalyzer)) )
       {
          DoxMentor4J app = DoxMentor4J.getApp();
          java.io.File archiveFile = app.getArchiveFile();
@@ -96,7 +90,7 @@ abstract public class SourceIndexer extends Indexer implements Indexable,
       public SourceCodeAnalyzer()
       //-------------------------
       {
-         super();
+         super(DoxMentor4J.LUCENE_VERSION);
          m_stopSet = StopFilter.makeStopSet(getLanguageStopWords());
       }
       
@@ -111,7 +105,7 @@ abstract public class SourceIndexer extends Indexer implements Indexable,
       //-------------------------------------------------------------
       {
          TokenStream result = super.tokenStream(fieldName, reader);
-         result = new StopFilter(result, m_stopSet);
+         result = new StopFilter(true, result, m_stopSet);
          return result;
       }
    }

@@ -15,7 +15,6 @@ package net.homeip.donaldm.doxmentor4j;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.Date;
 import java.util.Properties;
 
 import net.homeip.donaldm.httpdbase4j.FileHttpd;
@@ -32,7 +31,7 @@ import sun.misc.Signal;
 import sun.misc.SignalHandler;
 import de.schlichtherle.io.File;
 import java.io.FileFilter;
-import net.homeip.donaldm.httpdbase4j.Http;
+import org.apache.lucene.util.Version;
 
 public class DoxMentor4J
 //======================
@@ -41,8 +40,10 @@ public class DoxMentor4J
    private static final String               VERSION = "0.1";
    
    public static final String                EOL = System.getProperty("line.separator");
+
+   public static final Version               LUCENE_VERSION = Version.LUCENE_30;
    
-   protected static Thread                   m_mainThread = null;
+   final protected static Thread             m_mainThread = Thread.currentThread();
    
    private Httpd                             m_httpd = null;
 
@@ -116,9 +117,10 @@ public class DoxMentor4J
 "                 Use the following substitution strings: %s = source file, %d = destination file" + EOL + 
 "                 %D = destination directory." + EOL +            
 "djvuext=path     Specifies the full path to the executable to be used to extract text files " + EOL +
-"                 from a .djvu file. If not specified then the DjvuIndexer constructor will " + EOL + 
-"                 attempt to find such an executable (On Windows it will attempt to find " + EOL +
-"                 djvutxt.exe and in Linux it will search for djvutxt)" + EOL +
+"                 from a .djvu file. If not specified then an internal native Java DJVU extractor " + EOL +
+"                 will be used." + EOL +
+//"                 The DjvuIndexer constructor will attempt to find such an executable " + EOL +
+//"                 (On Windows it will attempt to find djvutxt.exe and in Linux it will search for djvutxt)" + EOL +
 "djvuargs=args    Specifies the arguments to send to the djvuext executable specified above" + EOL + 
 "                 Use the following substitution strings: %s = source file, %d = destination file" + EOL + 
 "                 %D = destination directory." + EOL +     
@@ -142,7 +144,7 @@ public class DoxMentor4J
 "be relative to the current (leaf) directory. eg view->href=html/index.htm" + EOL + 
 "The description is the text which will be displayed in the browser tree for this view" + EOL + 
 "search specifies whether the document should be indexed for a full text search using Lucene" + EOL +
-"If yes or y then the document specified in href will be indexed (if the doucment type is " +
+"If yes or y then the document specified in href will be indexed (if the document type is " +
 "supported).  If no then the documents will not be searchable. " + EOL + 
 "If search=links and the document is an html file then an attempt will be made to " + EOL + 
 "recursively index all documents that are linked to the first document specified" + EOL + 
@@ -383,7 +385,7 @@ public class DoxMentor4J
          return false;
        String s = properties.getProperty("search", "y").trim();
        if (s.substring(0,1).compareToIgnoreCase("y") == 0)
-          m_isSearchable = true;       
+          m_isSearchable = true;
        
        m_logDir = new java.io.File(properties.getProperty("logdir", "log").trim());
        if ( (m_logDir.exists()) && (! m_logDir.isDirectory()) )
@@ -508,9 +510,9 @@ public class DoxMentor4J
             return false;
          }   
          m_archivePath = new File(m_archiveFile, m_archiveDirName);
-         stHandler = new ArchiveStringTemplateHandler(m_httpd, 
-                                           "net.homeip.donaldm.doxmentor4j.templates",
-                                           m_archiveFile, m_archiveDirName);
+         stHandler = new ArchiveStringTemplateHandler(m_httpd,
+                                                      "net.homeip.donaldm.doxmentor4j.templates",
+                                                      m_archiveFile, m_archiveDirName);
       }
       else
          if (m_archiveFile != null)
@@ -520,15 +522,15 @@ public class DoxMentor4J
             m_archivePath = new File(m_archiveFile, m_archiveDirName);
             m_httpd = new ArchiveHttpd(m_archiveFile, m_archiveDirName, 10, 15);
             stHandler = new ArchiveStringTemplateHandler(m_httpd, 
-                                           "net.homeip.donaldm.doxmentor4j.templates",
-                                           m_archiveFile, m_archiveDirName);
+                                                         "net.homeip.donaldm.doxmentor4j.templates",
+                                                         m_archiveFile, m_archiveDirName);
          }
          else
             if (m_homeDir != null)
             {
                m_httpd = new FileHttpd(m_homeDir, 10, 15);   
                stHandler = new FileStringTemplateHandler(m_httpd, 
-                                              "net.homeip.donaldm.doxmentor4j.templates");
+                                                         "net.homeip.donaldm.doxmentor4j.templates");
             }
       if (isDebug)
       {
@@ -602,12 +604,9 @@ public class DoxMentor4J
       boolean ok = false;
       Runtime.getRuntime().addShutdownHook(new Thread() 
       {
-         public void run() 
-         {
-            shutdown();
-         }
+         @Override public void run() { shutdown(); }
       });
-      m_mainThread = Thread.currentThread();
+
       MySignalHandler signalHandler = new MySignalHandler(app);
       Signal.handle(new Signal("INT"), signalHandler);
       Signal.handle(new Signal("TERM"), signalHandler);

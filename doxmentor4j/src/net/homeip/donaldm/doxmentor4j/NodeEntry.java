@@ -46,66 +46,74 @@ public class NodeEntry
    static public NodeEntry[] getEntries(Request request)
    //---------------------------------------------------
    {
-      String s = request.getURI().getPath().trim();
-      Request dirRequest = request;
-      if ( (s.length() == 0) || (s.compareTo("/") == 0) ||
-              (s.compareTo("/index.st") == 0) )
-      {
-         if (s.compareTo("/index.st") == 0)
-            request = request.getDirRequest();
-         request = request.getChildRequest("library");
-      }
-      else
-         if (! request.isDirectory())
-            request = request.getDirRequest();
-
       NodeEntry[] nodeEntries = null;
-      TreeSet<DirItemInterface> files =null, dirs = null;      
-      Iterator<DirItemInterface> it;
-      StringBuffer text = new StringBuffer();
-      NodeEntry nodeEntry = null;
-      if (_isNode(request, text))
+      try
       {
-         dirs = request.getDirListDirectories(SORTBY.NAME);
-         if (dirs == null)
-            nodeEntries = new NodeEntry[0];
+         String s = request.getURI().getPath().trim();
+         if ( (s.length() == 0) || (s.compareTo("/") == 0) ||
+                 (s.compareTo("/index.st") == 0) )
+         {
+            if (s.compareTo("/index.st") == 0)
+               request = request.getDirRequest();
+            request = request.getChildRequest("library");
+         }
+         else
+            if (! request.isDirectory())
+               request = request.getDirRequest();
+
+         TreeSet<DirItemInterface> files =null, dirs = null;
+         Iterator<DirItemInterface> it;
+         StringBuffer text = new StringBuffer();
+         NodeEntry nodeEntry = null;
+         if (_isNode(request, text))
+         {
+            dirs = request.getDirListDirectories(SORTBY.NAME);
+            if (dirs == null)
+               nodeEntries = new NodeEntry[0];
+            else
+            {
+               nodeEntries = new NodeEntry[dirs.size()];
+               int j = 0;
+               for (it = dirs.iterator(); it.hasNext();)
+               {
+                  DirItemInterface dirItem = it.next();
+                  nodeEntry = null;
+                  try
+                  {
+                     nodeEntry = new NodeEntry(request, dirItem);
+                     nodeEntries[j++] = nodeEntry;
+                  }
+                  catch (Exception e)
+                  {
+                     logger.error("Error creating index directory", e);
+                  }
+               }
+            }
+         }
          else
          {
-            nodeEntries = new NodeEntry[dirs.size()];
-            int j = 0;
-            for (it = dirs.iterator(); it.hasNext();)
+            if (_isLeaf(request, text))
             {
-               DirItemInterface dirItem = it.next();
-               nodeEntry = null;
+               nodeEntries = new NodeEntry[1];
                try
                {
-                  nodeEntry = new NodeEntry(request, dirItem);
-                  nodeEntries[j++] = nodeEntry;
+                  nodeEntry = new NodeEntry(request, text.toString());
+                  nodeEntries[0] = nodeEntry;
                }
                catch (Exception e)
-               {                  
+               {
                   logger.error("Error creating index directory", e);
-               }               
+               }
             }
-         }         
-      }
-      else
-      {
-         if (_isLeaf(request, text))
-         {
-            nodeEntries = new NodeEntry[1];
-            try
-            {
-               nodeEntry = new NodeEntry(request, text.toString());                  
-               nodeEntries[0] = nodeEntry;
-            }
-            catch (Exception e)
-            {
-               logger.error("Error creating index directory", e);
-            }               
          }
       }
-      
+      catch (Exception e)
+      {
+         logger.error("", e);
+         nodeEntries = new NodeEntry[1];
+         NodeEntry nodeEntry = new NodeEntry(request, "ERROR: " + e.getMessage());
+         nodeEntries[0] = nodeEntry;
+      }
       return nodeEntries;
    }
    
@@ -195,8 +203,8 @@ public class NodeEntry
     * a '^^^' string
     * @return An Iterator over the view-> directives of the LEAF file
     */
-   protected static Iterator<ViewInfo> viewIterator(final String text)
-   //-----------------------------------------------------------------
+   protected static Iterator<ViewInfo> viewIterator(final String text, final String path)
+   //----------------------------------------------------------------------------------------
    {
       return new Iterator<NodeEntry.ViewInfo>() 
       {
@@ -263,6 +271,8 @@ public class NodeEntry
                   matches.put(k, v);
                }
                String href = matches.get("href");
+               if ( (href.trim().equals(".")) && (path != null) )
+                  href = path;
                String name = matches.get("description");               
                if (name == null) name = "View";
                String target = matches.get("target");
@@ -329,7 +339,7 @@ public class NodeEntry
       description.append(getLeafName(text));
       
       ArrayList<ViewInfo> views = new ArrayList<ViewInfo>();
-      for (Iterator<ViewInfo> it = viewIterator(text); it.hasNext();)
+      for (Iterator<ViewInfo> it = viewIterator(text, request.getPath()); it.hasNext();)
       {
          ViewInfo vi = it.next();
          if (vi != null)
@@ -491,10 +501,17 @@ public class NodeEntry
             
       }
       
-      public boolean isTargetexists() 
-      { 
-         return ( (target != null) && (target.length() > 0) ); 
-      }      
+      public boolean isTargetexists() { return ( (target != null) && (target.length() > 0) );  }
+
+      @Override
+      public String toString()
+      //----------------------
+      {
+         return "ViewInfo{" + "name=" + name + ", href=" + href + ", dir=" + dir +  ", search=" +
+                 search + ", indexable=" + indexable + ", target=" + target + ", valid=" + valid + '}';
+      }
+
+
    }
    
    private DirItemInterface m_dir =  null;

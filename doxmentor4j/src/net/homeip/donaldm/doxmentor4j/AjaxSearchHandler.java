@@ -15,7 +15,6 @@
 package net.homeip.donaldm.doxmentor4j;
 
 import java.io.BufferedReader;
-import java.io.InputStream;
 import java.util.StringTokenizer;
 
 import net.homeip.donaldm.httpdbase4j.CloneableHeaders;
@@ -32,10 +31,10 @@ import org.apache.lucene.document.Document;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.queryParser.ParseException;
 import org.apache.lucene.queryParser.QueryParser;
-import org.apache.lucene.search.Hits;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.Searcher;
+import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.store.Directory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,7 +42,8 @@ import org.slf4j.LoggerFactory;
 import com.sun.net.httpserver.HttpExchange;
 
 import de.schlichtherle.io.File;
-import de.schlichtherle.io.FileInputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 public class AjaxSearchHandler implements Postable
 //================================================
@@ -66,6 +66,8 @@ public class AjaxSearchHandler implements Postable
       CloneableHeaders postHeaders = request.getPOSTParameters();
       String searchText = postHeaders.getFirst("search");
       String page = postHeaders.getFirst("page");      
+      int maxHits;
+      try { maxHits = Integer.parseInt(postHeaders.getFirst("maxhits")); } catch (NumberFormatException _e) { maxHits = 100; }
       int pageNo;
       try { pageNo = Integer.parseInt(page); } catch (Exception e) {pageNo = 1;}
       if (pageNo < 0) pageNo = 1;
@@ -73,20 +75,22 @@ public class AjaxSearchHandler implements Postable
          html = "<p><center><h1>Please enter search text before clicking search" +
                  "</h1></center></p>";
       else
-         html = search(searchText, pageNo-1);
+         html = search(searchText, maxHits, pageNo-1);
         
       
       r.setBody(html);
       r.setMimeType(Http.MIME_HTML);
       r.addHeader("Cache-Control", "no-cache");
+      r.addHeader("Pragma", "no-cache");
+      r.addHeader("Expires", "Sat, 26 Jul 1997 05:00:00 GMT");
       r.addHeader("Content-Length", Integer.toString(html.length()));
       return r;
    }
    
    private final int DISPLAY_WINDOW_SIZE = 10;
    
-   private String search(String searchText, int pageNo)
-   //--------------------------------------------------
+   private String search(String searchText, int maxHits, int pageNo)
+   //---------------------------------------------------------------
    {
       DoxMentor4J app = DoxMentor4J.getApp();
       java.io.File archiveFile = app.getArchiveFile();
@@ -124,8 +128,8 @@ public class AjaxSearchHandler implements Postable
                                 + e.getMessage());
          }
          searcher = new IndexSearcher(indexReader);
-         Analyzer analyzer = new StandardAnalyzer();
-         QueryParser parser = new QueryParser("contents", analyzer);
+         Analyzer analyzer = new StandardAnalyzer(DoxMentor4J.LUCENE_VERSION);
+         QueryParser parser = new QueryParser(DoxMentor4J.LUCENE_VERSION, "contents", analyzer);
          Query query = null;
          try
          {
@@ -137,8 +141,8 @@ public class AjaxSearchHandler implements Postable
             return errorMessage("Error parsing search text (" + searchText + ")<br>"
                     + e.getMessage());
          }
-         Hits hits = searcher.search(query);
-         int count = hits.length();
+         TopDocs hits = searcher.search(query, maxHits);
+         final int count = hits.totalHits;
          if (count == 0)
             html.append("<div style=\"vertical-align: middle; \"><p>Query " +
                     "returned no hits</p></div>");
@@ -148,17 +152,22 @@ public class AjaxSearchHandler implements Postable
             if ((count % HITS_PER_PAGE) != 0)
                pages++;
             int startHit = pageNo*HITS_PER_PAGE;
-            int endHit = Math.min(startHit + HITS_PER_PAGE, hits.length());
+            int endHit = Math.min(startHit + HITS_PER_PAGE, count);
             html.append("<div style=\"vertical-align: top; \">");
             html.append("<p width=\"100%\" align=\"right\" class=\"search\">");
             html.append(String.format("Page %d/%d (Hits %d-%d of %d)", pageNo+1,
-                    pages, startHit, endHit, hits.length()));
+                                      pages, startHit, endHit, count));
             html.append("</div>");
             html.append("<div style=\"vertical-align: middle; \">");
             for (int i = startHit; i < endHit; i++)
-            {
-               Document doc = hits.doc(i);
+            {               
+               Document doc = searcher.doc(hits.scoreDocs[i].doc);
                String title = doc.get("title");
+               String pg = doc.get("page");
+               if (pg == null)
+                  pg = "-1";
+               int page;
+               try { page = Integer.parseInt(pg); } catch (Exception _e) { page = -1; }
                if (title == null)
                   title = "<i>Title undefined</i>";
                String href = doc.get("path");
@@ -167,7 +176,7 @@ public class AjaxSearchHandler implements Postable
                   html.append(String.format("<a href=\"%s\" class=\"search\">" +
                           "%s&nbsp;(%s)</a>",
                           href, title, href));
-                  String fragment = getFragment(href, searchText);
+                  String fragment = getFragment(href, searchText, page);
                   if (fragment.length() > 0)
                      html.append(fragment);
                   html.append("<hr>");
@@ -181,25 +190,22 @@ public class AjaxSearchHandler implements Postable
             // is 0 based.
             if (pageNo > 0)
             {               
-               html.append("<font size=\"+1\"><a class=\"search\" " +
-                       "href=\"javascript:search('" + searchText + "'," + pageNo
-                       + ")\">Previous</a></font>&nbsp;&nbsp;");
+               html.append("<font size=\"+1\"><a class=\"search\" " + "href=\"javascript:search('").
+                    append(searchText).append("',").append(pageNo).append(")\">Previous</a></font>&nbsp;&nbsp;");
             }
             int startPage = Math.max(0, pageNo - DISPLAY_WINDOW_SIZE/2);
             int endPage = Math.min(pages, pageNo + DISPLAY_WINDOW_SIZE/2);
             for (int p=startPage; p<endPage; p++)
             {
                if (p != pageNo)
-                  html.append("<a href=\"javascript:search('" + searchText + 
-                          "'," +  (p+1) + ")\" " + "class=\"search\">" + (p+1) + 
-                          "</a>&nbsp;");
+                  html.append("<a href=\"javascript:search('").append(searchText).append("',").
+                       append(p + 1).append(")\" " + "class=\"search\">").append(p + 1).append("</a>&nbsp;");
                else
-                  html.append((p+1) + "&nbsp;");
+                  html.append(p + 1).append("&nbsp;");
             }
             if ((pageNo+1) < pages)
-               html.append("<font size=\"+1\"><a class=\"search\" " +
-                       "href=\"javascript:search('" + searchText + "'," + 
-                       (pageNo + 2) + ")\"> Next</a></font>");
+               html.append("<font size=\"+1\"><a class=\"search\" " + "href=\"javascript:search('").
+                    append(searchText).append("',").append(pageNo + 2).append(")\"> Next</a></font>");
             html.append("</div>");
          }
       }
@@ -221,64 +227,72 @@ public class AjaxSearchHandler implements Postable
    }
    
    
-   private String getFragment(String href, String searchText)
-   //--------------------------------------------------------
+   private String getFragment(String href, String searchText, int page)
+   //------------------------------------------------------------------
    {
       DoxMentor4J app = DoxMentor4J.getApp();
       java.io.File archiveFile = app.getArchiveFile();
       String archiveDir = app.getArchiveDir();
       File home = null;
-      InputStream is = null;
-      BufferedReader br = null;
-      if (archiveFile != null)
-         home = new File(archiveFile, archiveDir);
+      URI uri = null;
+      if (href.trim().startsWith("http:"))
+         try { uri = new URI(href); } catch (URISyntaxException e) { logger.error("Invalid href " + href, e); return ""; }
       else
-         home = new File(app.getHomeDir());
-      File f;
-      if (home != null)
       {
-         f = new File(home, href);
-         try                    
-         {  
-            is = new FileInputStream(f);
-         }
-         catch (Exception e)
-         {
-            logger.error("Error opening " + f.getAbsolutePath(), e);
-            return "Error opening " + f.getAbsolutePath() + " (" + 
-                   e.getMessage() + ")";
-         }
+         if (archiveFile != null)
+            home = new File(archiveFile, archiveDir);
+         else
+            home = new File(app.getHomeDir());
+         File f;
+         if (home != null)
+            f = new File(home, href);
+         else
+            return "";
+         uri = f.toURI();
       }
-      else         
-         return "";
-
-      
-      String ext = Utils.getExtension(href);
-      Indexable indexer = IndexFactory.getApp().getIndexer(ext);
-      StringBuilder sb = new StringBuilder();
-      if (indexer != null)
+      BufferedReader reader = null;
+      StringBuilder sb = new StringBuilder(), body = new StringBuilder();
+      try
       {
-         StringBuilder title = new StringBuilder();
-         StringBuffer body = new StringBuffer();
-         if (indexer.getData(is, href, f.getAbsolutePath(), null, body) != null)
-         {
-            String s = body.toString();            
-            body.setLength(0);
-            StringTokenizer tok = new StringTokenizer(searchText);
-            while (tok.hasMoreTokens())
+         String ext = Utils.getExtension(href);
+         Indexable indexer = IndexFactory.getApp().getIndexer(ext);         
+         if (indexer != null)
+         {            
+            reader = new BufferedReader(indexer.getText(uri, page, null));
+            if (reader != null)
             {
-               String t = tok.nextToken();
-               int p = Utils.indexOfIgnoreCase(s, t);
-               if (p >= 0)
+               String s;
+               while ( (s = reader.readLine()) != null)
+                  body.append(s);
+               body.trimToSize();
+               s = body.toString();
+
+               StringTokenizer tok = new StringTokenizer(searchText);
+               while (tok.hasMoreTokens())
                {
-                  sb.append(extract(s, p, t));
-                  sb.append("<BR>");
+                  String t = tok.nextToken();
+                  int p = Utils.indexOfIgnoreCase(s, t);
+                  if (p >= 0)
+                  {
+                     sb.append(extract(s, p, t));
+                     sb.append("<BR>");
+                  }
                }
             }
+            else
+               logger.warn("No indexor for " + href);
          }
       }
-      else
-         logger.warn("No indexor for " + href);
+      catch (Exception e)
+      {
+         logger.error("", e);
+      }
+      finally
+      {
+         body.setLength(0); body.trimToSize();
+         if (reader != null)
+            try { reader.close(); } catch (Exception _e) {}
+      }
       return sb.toString();
    }
    

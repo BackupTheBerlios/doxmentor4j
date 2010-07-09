@@ -13,12 +13,10 @@
 
 package net.homeip.donaldm.doxmentor4j.indexers;
 
+import java.io.Reader;
+import java.net.URI;
 import net.homeip.donaldm.doxmentor4j.indexers.spi.Indexable;
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.StringWriter;
 
 import net.homeip.donaldm.doxmentor4j.AjaxIndexer;
 
@@ -28,12 +26,18 @@ import org.apache.lucene.index.IndexWriter;
 import org.slf4j.Logger;
 
 import de.schlichtherle.io.File;
-import de.schlichtherle.io.FileInputStream;
+import de.schlichtherle.io.FileReader;
+import java.io.FileNotFoundException;
+import java.io.InputStreamReader;
+import java.net.MalformedURLException;
+import java.util.Map;
+import net.homeip.donaldm.doxmentor4j.Utils;
+import org.apache.lucene.store.AlreadyClosedException;
 
 abstract public class Indexer implements Indexable, Cloneable
 //===========================================================
 {            
-   protected String[] EXTENSIONS = new String[0];
+   protected Map<String, Void> m_extensions;
    
    protected IndexWriter m_indexWriter = null;
    
@@ -55,101 +59,94 @@ abstract public class Indexer implements Indexable, Cloneable
       return klone;
    }
 
-   @Override public String[] supportedFileTypes() { return EXTENSIONS;  }
+   @Override public String[] supportedFileTypes() { return m_extensions.keySet().toArray(new String[0]);  }
+
+   @Override
+   public void addFileType(String ext)
+   //---------------------------------
+   {
+      if (ext == null) return;
+      int p = ext.trim().indexOf('.');
+      if (p >= 0)
+         ext = ext.substring(p+1);         
+      m_extensions.put(ext.toLowerCase(), null);
+   }
 
    @Override
    public boolean supportsFileType(String ext)
    //-----------------------------------------------
    {
-      ext = ext.trim();
-      if (ext.startsWith(".")) ext = ext.substring(1);
-      for (int i=0; i<EXTENSIONS.length; i++)
-         if (ext.compareToIgnoreCase(EXTENSIONS[i]) == 0)
-            return true;
-      return false;
+      if (ext == null) return false;
+      int p = ext.trim().indexOf('.');
+      if (p >= 0)
+         ext = ext.substring(p+1);
+      return m_extensions.containsKey(ext.toLowerCase());
    }
    
    @Override
-   public void setIndexWriter(IndexWriter indexWriter)
-   //------------------------------------------------
-   {
-      m_indexWriter = indexWriter;
-   }
+   public void setIndexWriter(IndexWriter indexWriter) { m_indexWriter = indexWriter; }
    
    public IndexWriter getIndexWriter() { return m_indexWriter; }
 
-   @Override
-   public Object getData(InputStream is, String href, String fullPath, 
-                         StringBuffer title, StringBuffer body)
-   //--------------------------------------------------------------------
+   protected String getUriName(URI uri)
+   //----------------------------------
    {
-      BufferedReader br = null;
-      StringWriter sw = new StringWriter();
-      try
-      {
-         href = href.trim();
-         int q = href.length(); 
-         if ( (href.endsWith(File.separator)) || (href.endsWith("/")) )
-            q = href.length() - 2;
-         int p = href.lastIndexOf(File.separatorChar, q);
-         if (p < 0)
-            p = href.lastIndexOf('/', q);
-         String s = (((p >= 0) && (++p < href.length())) 
-                           ? href.substring(p) : href);
-         if (title != null)
-            title.append(s);
-         br = new BufferedReader(new InputStreamReader(is));
-         char[] buffer = new char[4096];
-         int cb =-1; 
-         while ( (cb=br.read(buffer)) >= 0) 
-            sw.write(buffer, 0, cb);
-         sw.flush();
-         if (body != null) 
-            body.append(sw.getBuffer());
-         if (body.length() == 0)
-            return null;
-      }
-      catch (Exception e)
-      {
-         logger().error("Reading document data " + fullPath, e);
-         return null;
-      }
-      finally
-      {
-         if (br != null) try { br.close(); } catch (Exception e) {}
-         if (sw != null) try { sw.close(); } catch (Exception e) {}
+      String href = uri.getPath();
+      if (href == null) return "";
+      int q = href.length();
+      if ( (href.endsWith(File.separator)) || (href.endsWith("/")) )
+         q = href.length() - 2;
+      int p = href.lastIndexOf(File.separatorChar, q);
+      if (p < 0)
+         p = href.lastIndexOf('/', q);
+      return (((p >= 0) && (++p < href.length()))
+               ? href.substring(p) : href);
+   }
 
+   @Override
+   public Reader getText(URI uri, int page, StringBuilder title)
+          throws FileNotFoundException, MalformedURLException, IOException
+   //-----------------------------------------------------------
+   {
+      if (title != null)
+         title.append(getUriName(uri));
+      String scheme = uri.getScheme();
+      if ( (scheme == null) || (scheme.equalsIgnoreCase("file")) )
+      {
+         File f = Utils.uri2Archive(uri);
+         if (f == null)
+            f = new File(uri.getPath());
+         return new FileReader(f);
       }
-      return Boolean.TRUE;
+      else if (scheme.equalsIgnoreCase("http"))
+         return new InputStreamReader(uri.toURL().openStream());
+      else
+         throw new UnsupportedOperationException(scheme);
    }
    
    /*
     * Defaults to text indexer
     */ 
    @Override
-   public long index(String href, String fullPath, boolean followLinks,
-                     Object... extraParams) throws IOException
+   public long index(String href, URI uri, boolean followLinks, Object... extraParams)
+          throws IOException
    //------------------------------------------------------------------
    {
       if (m_indexWriter == null) return -1;
       long count =0;
             
-      InputStream is = null;      
+      Reader reader = null;
       try
-      {
-         is = new FileInputStream(fullPath);
-         if (is == null) return -1;
-         
-         StringBuffer title = new StringBuffer();
-         StringBuffer body = new StringBuffer();
-         if (getData(is, href, fullPath, title, body) != null)
-         {
+      {         
+         StringBuilder title = new StringBuilder();
+         if ( (reader = getText(uri, -1, title)) != null)
+         {            
             Document doc = new Document();
             doc.add(new Field("path", href, Field.Store.YES, Field.Index.NO));
             doc.add(new Field("title", title.toString(), 
-                              Field.Store.YES, Field.Index.TOKENIZED));
-            doc.add(new Field("contents", body.toString(), 
-                              Field.Store.NO, Field.Index.TOKENIZED));
+                              Field.Store.YES, Field.Index.ANALYZED));
+            doc.add(new Field("contents", reader, Field.TermVector.WITH_POSITIONS_OFFSETS));
+            doc.add(new Field("page", "-1", Field.Store.YES, Field.Index.NO));
             if (addDocument(doc))
             {
                count++;
@@ -162,8 +159,13 @@ abstract public class Indexer implements Indexable, Cloneable
       }
       catch (Exception e)
       {
-         logger().error("Indexing document " + fullPath, e);
+         logger().error("Indexing document " + uri.toString(), e);
          return -1;
+      }
+      finally
+      {
+         if (reader != null)
+            try { reader.close(); } catch (Exception _e) {}
       }
 
       return count;
@@ -172,19 +174,27 @@ abstract public class Indexer implements Indexable, Cloneable
    protected boolean addDocument(Document doc)
    //-----------------------------------------
    {
-      try
+      for (int i=0; i<2; i++)
       {
-         m_indexWriter.addDocument(doc);
+         try
+         {
+            m_indexWriter.addDocument(doc);
+            return true;
+         }
+         catch (AlreadyClosedException e)
+         {
+            if (i > 0)
+               logger().error("Error adding Lucene Document.", e);
+            m_indexWriter = IndexFactory.getWriter();
+            continue;
+         }
+         catch (Exception e)
+         {
+            logger().error("Error adding Lucene Document.", e);
+            return false;
+         }
       }
-      catch (Exception e)
-      {                  
-         logger().error("Error adding Lucene Document.", e);
-      }
-      finally
-      {
-         doc = null;
-      }
-      return true;
+      return false;
    }
    
 }

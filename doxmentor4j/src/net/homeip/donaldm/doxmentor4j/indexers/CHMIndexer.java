@@ -15,6 +15,7 @@ package net.homeip.donaldm.doxmentor4j.indexers;
 
 import net.homeip.donaldm.doxmentor4j.indexers.spi.Indexable;
 import java.io.File;
+import java.util.HashMap;
 import net.homeip.donaldm.doxmentor4j.DoxMentor4J;
 import net.homeip.donaldm.doxmentor4j.Utils;
 import org.slf4j.Logger;
@@ -28,22 +29,28 @@ public class CHMIndexer extends CommandLineIndexer implements Indexable, Cloneab
    public CHMIndexer()
    //-----------------
    {
-      EXTENSIONS = new String[] { "chm" };                        
+      m_extensions = new HashMap<String, Void>()
+      {{
+          put("chm", null );
+      }};
    }
    
    public CHMIndexer(String extractorPath, String extractorArgs)
    //-----------------------------------------------------------
    {
       super(extractorPath, extractorArgs);
-      EXTENSIONS = new String[] { "chm" };
+      m_extensions = new HashMap<String, Void>()
+      {{
+          put("chm", null );
+      }};
       setIndexer(IndexFactory.getApp().getIndexer("html"));      
    }
 
    @Override public Logger logger() {return logger; }
 
    @Override
-   protected boolean getExtractor()
-   //-----------------------------
+   protected boolean getExtractor(boolean isFindDefault)
+   //----------------------------------------------------
    {
       File chmext = null;
       String s = DoxMentor4J.getApp().getCHMExtractor();
@@ -64,71 +71,73 @@ public class CHMIndexer extends CommandLineIndexer implements Indexable, Cloneab
          setIndexer(IndexFactory.getApp().getIndexer("html"));
          return true;
       }
-      if ( (s != null) && (chmext == null) )
-         logger.warn("CHMIndexer: Extractor args " + s +
-                     " but no extractor specified. Attempting to find default extractors");
 
-      // Try to get working extractor per OS
-      String os = System.getProperty("os.name").toLowerCase();
-      if (os.startsWith("windows"))
+      if (isFindDefault)
       {
-         String drive = System.getProperty("user.home");
-         if (drive.length() > 3)
-            drive = drive.substring(0, 3);
-         else
-            if (drive.length() < 3)
-               drive = drive + "\\";
-         chmext = Utils.findFile("hh.exe", drive+"windows", drive+"windows\\system",
-                           drive+"windows\\system32",
-                           drive+"Program Files\\HTML Help Workshop");
-         if (chmext != null)
-         {
-            setExtractorPath(chmext.getAbsolutePath());
-            setExtractorArgs("-decompile $D $s ");
-            setIndexer(IndexFactory.getApp().getIndexer("html"));
-            return true;
-         }
-         else
-         {
-            s = "CHMIndexer: Could not find hh.exe for extracting " +
-                       ".chm files. Searched: " +  drive+"windows;" + drive+
-                        "windows\\system;" + drive+"windows\\system32;" +
-                        drive+"Program Files\\HTML Help Workshop";
-            logger.error(s);
-            return false;
-         }
+         logger.warn("CHMIndexer: No Chm extractor and/or extractor args specified. Attempting to find default extractors");
 
-      }
-      else if (! os.startsWith("OS/2"))
+         // Try to get working extractor per OS
+         String os = System.getProperty("os.name").toLowerCase();
+         if (os.startsWith("windows"))
          {
-            chmext = Utils.findFile("chmdump", "/bin", "/usr/bin", "/usr/local/bin",
-                              "/usr/sbin", "/usr/local/sbin", "/opt/bin");
-            if (chmext == null)
-            {
-               chmext = Utils.findFile("chmextract", "/bin", "/usr/bin",
-                                       "/usr/local/bin", "/usr/sbin",
-                                       "/usr/local/sbin", "/opt/bin");
-               if (chmext == null)
-                  chmext = Utils.findFile("extract_chmLib", "/bin", "/usr/bin",
-                                          "/usr/local/bin", "/usr/sbin",
-                                          "/usr/local/sbin", "/opt/bin");
-            }
+            String drive = System.getProperty("user.home");
+            if (drive.length() > 3)
+               drive = drive.substring(0, 3);
+            else
+               if (drive.length() < 3)
+                  drive = drive + "\\";
+            chmext = Utils.findFile("hh.exe", drive+"windows", drive+"windows\\system",
+                              drive+"windows\\system32",
+                              drive+"Program Files\\HTML Help Workshop");
             if (chmext != null)
             {
                setExtractorPath(chmext.getAbsolutePath());
-               setExtractorArgs("$s $D");
+               setExtractorArgs("-decompile $D $s ");
                setIndexer(IndexFactory.getApp().getIndexer("html"));
                return true;
             }
             else
             {
-               s = "CHMIndexer: Could not find a chm extractor. Searched for"
-                        + " chmdump, chmextract and extract_chmLib in /bin:" +
-                          "/usr/bin:/usr/local/bin:/usr/sbin:/usr/local/sbin:/opt/bin";
+               s = "CHMIndexer: Could not find hh.exe for extracting " +
+                          ".chm files. Searched: " +  drive+"windows;" + drive+
+                           "windows\\system;" + drive+"windows\\system32;" +
+                           drive+"Program Files\\HTML Help Workshop";
                logger.error(s);
                return false;
             }
+
          }
+         else if (! os.startsWith("OS/2"))
+            {
+               chmext = Utils.findFile("chmdump", "/bin", "/usr/bin", "/usr/local/bin",
+                                 "/usr/sbin", "/usr/local/sbin", "/opt/bin");
+               if (chmext == null)
+               {
+                  chmext = Utils.findFile("chmextract", "/bin", "/usr/bin",
+                                          "/usr/local/bin", "/usr/sbin",
+                                          "/usr/local/sbin", "/opt/bin");
+                  if (chmext == null)
+                     chmext = Utils.findFile("extract_chmLib", "/bin", "/usr/bin",
+                                             "/usr/local/bin", "/usr/sbin",
+                                             "/usr/local/sbin", "/opt/bin");
+               }
+               if (chmext != null)
+               {
+                  setExtractorPath(chmext.getAbsolutePath());
+                  setExtractorArgs("$s $D");
+                  setIndexer(IndexFactory.getApp().getIndexer("html"));
+                  return true;
+               }
+               else
+               {
+                  s = "CHMIndexer: Could not find a chm extractor. Searched for"
+                           + " chmdump, chmextract and extract_chmLib in /bin:" +
+                             "/usr/bin:/usr/local/bin:/usr/sbin:/usr/local/sbin:/opt/bin";
+                  logger.error(s);
+                  return false;
+               }
+            }
+      }
       return false;
    }
 }

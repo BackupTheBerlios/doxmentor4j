@@ -13,6 +13,7 @@
 
 package net.homeip.donaldm.doxmentor4j.indexers;
 
+import java.util.HashMap;
 import net.homeip.donaldm.doxmentor4j.indexers.spi.Indexable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,8 +38,11 @@ public class RubyIndexer extends SourceIndexer implements Indexable, Cloneable
    public RubyIndexer()
    //---------------
    {
-      // Allows .h files to be indexed with CppIndexer
-      EXTENSIONS = new String[] { "rb", "ruby" }; 
+      m_extensions = new HashMap<String, Void>()
+      {{
+          put("rb", null );
+          put("ruby", null);
+      }};
    }
 
    @Override public String[] getLanguageStopWords()

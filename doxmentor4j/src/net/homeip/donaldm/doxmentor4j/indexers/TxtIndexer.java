@@ -13,6 +13,7 @@
 
 package net.homeip.donaldm.doxmentor4j.indexers;
 
+import java.util.HashMap;
 import net.homeip.donaldm.doxmentor4j.indexers.spi.Indexable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,7 +28,11 @@ public class TxtIndexer extends Indexer implements Indexable, Cloneable
    public TxtIndexer()
    //-----------------
    {
-      EXTENSIONS = new String[] { "txt", "asc" };
+      m_extensions = new HashMap<String, Void>()
+      {{
+          put("txt", null );
+          put("asc", null);
+      }};
    }   
    
 }

@@ -13,6 +13,7 @@
 
 package net.homeip.donaldm.doxmentor4j.indexers;
 
+import java.util.HashMap;
 import net.homeip.donaldm.doxmentor4j.indexers.spi.Indexable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,7 +40,11 @@ public class CIndexer extends SourceIndexer implements Indexable, Cloneable
    //---------------
    {
       // Allows .h files to be indexed with CppIndexer
-      EXTENSIONS = new String[] { "c" }; 
+      m_extensions = new HashMap<String, Void>()
+      {{
+          put("c", null );
+          put("h", null );
+      }};
    }
 
    @Override

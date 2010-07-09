@@ -27,10 +27,7 @@ public class Index extends TemplatableAdapter
 //-------------------------------------------
 {
    
-   public Index()
-   //----------------------
-   {      
-   }
+   public Index() { }
    
    private void setTemplateAttributes(StringTemplate template, Request request)
    //-------------------------------------------------------------------------

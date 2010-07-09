@@ -13,10 +13,12 @@
 
 package net.homeip.donaldm.doxmentor4j.indexers;
 
+import java.io.FileNotFoundException;
+import java.io.Reader;
+import java.net.MalformedURLException;
+import java.net.URI;
 import net.homeip.donaldm.doxmentor4j.indexers.spi.Indexable;
-import java.io.BufferedInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -36,7 +38,8 @@ import au.id.jericho.lib.html.HTMLElementName;
 import au.id.jericho.lib.html.Segment;
 import au.id.jericho.lib.html.Source;
 import de.schlichtherle.io.File;
-import de.schlichtherle.io.FileInputStream;
+import java.io.StringReader;
+import java.util.regex.Matcher;
 
 public class HTMLIndexer extends Indexer implements Indexable, Cloneable
 //======================================================================
@@ -48,62 +51,71 @@ public class HTMLIndexer extends Indexer implements Indexable, Cloneable
    public HTMLIndexer() throws IOException
    //-------------------------------------
    {
-      EXTENSIONS = new String[] 
-                     { "html", "htm", "ht", "asp", "xml", "xhttp" };
-   }   
-   
+      m_extensions = new HashMap<String, Void>()
+      {{
+          put("html", null );
+          put("htm", null);
+          put("ht", null);
+          put("asp", null);
+          put("xhttp", null);
+      }};
+   }
+
    @Override
-   public Object getData(InputStream is, String href, String fullPath, 
-                         StringBuffer title, StringBuffer body)
-   //-------------------------------------------------------------------
+   public Reader getText(URI uri, int page, StringBuilder title) throws FileNotFoundException,
+                                                                        MalformedURLException,
+                                                                        IOException
+   //-------------------------------------------------------------------------------------------
    {
-      BufferedInputStream bis = null;
       Source source = null;
+      java.io.File tmpHtml = null;
+      java.io.FileInputStream fis = null;
       try
       {
-         if (is instanceof BufferedInputStream)
-            bis = (BufferedInputStream) is;
-         else
-            bis = new BufferedInputStream(is);
-
          String s;
-         source = new Source(bis);
+         tmpHtml = Utils.uri2File(uri);
+         if (tmpHtml != null)
+         {
+            fis = new java.io.FileInputStream(tmpHtml);
+            source = new Source(fis);
+         }
+         else
+            source = new Source(uri.toURL());
          source.setLogger(null);
          source.fullSequentialParse();         
-         try { bis.close(); bis = null; } catch (Exception e) {}
          Element el = source.findNextElement(0, HTMLElementName.TITLE);
          if ( (el != null) && (title != null) )
          {
             s = CharacterReference.decodeCollapseWhiteSpace(el.getContent());
             if ( (s == null) || (s.length() == 0) )
-               s = href;
+               s = uri.getPath();
             title.append(s);
          }
 
          el = source.findNextElement(0,HTMLElementName.BODY);
          Segment seg = ((el == null) ? source : el.getContent());
-         if (body != null)
-            body.append(seg.getTextExtractor().setIncludeAttributes(true).toString());
+         return new StringReader(seg.getTextExtractor().setIncludeAttributes(true).toString());
       }
       catch (Exception e)
       {
-         logger.error("Reading document data " + fullPath, e);
+         logger.error("Reading document data " + uri.toString(), e);
          return null;
       }
       finally
       {
-         if (bis != null)
-            try { bis.close(); } catch (Exception e) {}
+         if (source != null)
+            source.clearCache();
+         if (fis != null)
+            try { fis.close(); } catch (Exception _e) {}
+         if ( (tmpHtml != null) &&
+              (tmpHtml.getAbsolutePath().toLowerCase().indexOf(System.getProperty("java.io.tmpdir")) >= 0) )
+            tmpHtml.delete();
       }
-      return source;
    }
-   
-   @SuppressWarnings("unchecked")
+
    @Override
-   public long index(String href, String fullPath, boolean followLinks,
-                     Object... extraParams) 
-                  throws IOException
-   //-------------------------------------------------------------------
+   public long index(String href, URI uri, boolean followLinks, Object... extraParams) throws IOException
+   //-----------------------------------------------------------------------------------------------------
    {
       if (m_indexWriter == null)
       {         
@@ -123,38 +135,22 @@ public class HTMLIndexer extends Indexer implements Indexable, Cloneable
       
       long count =0, c =0;      
       Source source = null;
-      InputStream is = null;
+      Reader reader = null;
+      java.io.File tmpHtml = null;
+      java.io.FileInputStream fis = null;
       try
-      {         
-         try
-         {        
-            is = new FileInputStream(fullPath);
-         }
-         catch (Exception e)
-         {            
-            e.printStackTrace(System.err);
-            logger.error("Error opening " + fullPath, e);
-            is = null;
-            return -1;
-         }
-         if (is != null)
+      {                  
+         StringBuilder title = new StringBuilder();
+         reader = getText(uri, -1, title);
+         if (reader != null)
          {
-            StringBuffer title = new StringBuffer();
-            StringBuffer body = new StringBuffer();
-            source = (Source) getData(is, href, fullPath, title, body);
-            if (is != null)
+            Document doc = new Document();
+            doc.add(new Field("path", href, Field.Store.YES, Field.Index.NO));
+            doc.add(new Field("title", title.toString(), Field.Store.YES, Field.Index.ANALYZED));
+            doc.add(new Field("contents", reader, Field.TermVector.WITH_POSITIONS_OFFSETS));            
+            doc.add(new Field("page", "-1", Field.Store.YES, Field.Index.NO));
+            try
             {
-               try { is.close(); } catch (Exception e) {}
-               is = null;
-            }
-            if (source != null)
-            {
-               Document doc = new Document();      
-               doc.add(new Field("path", href, Field.Store.YES, Field.Index.NO));
-               doc.add(new Field("title", title.toString(), 
-                                 Field.Store.YES, Field.Index.TOKENIZED));
-               doc.add(new Field("contents", body.toString(), 
-                                 Field.Store.NO, Field.Index.TOKENIZED));
                if (addDocument(doc))
                {
                   AjaxIndexer.incrementCount();
@@ -162,15 +158,31 @@ public class HTMLIndexer extends Indexer implements Indexable, Cloneable
                }
                else
                   return -1;
-               doc = null;
+            }
+            finally
+            {
+               try { reader.close(); reader = null; } catch (Exception _e) {}
+            }
+            doc = null;
+         }
+         else
+         {
+            logger.error("HTMLIndexer: Error parsing html: " + uri.toString());
+            return -1L;
+         }
+
+         if (followLinks)
+         {            
+            tmpHtml = Utils.uri2File(uri);
+            if (tmpHtml != null)
+            {
+               fis = new java.io.FileInputStream(tmpHtml);
+               source = new Source(fis);            
             }
             else
-            {
-               logger.error("HTMLIndexer: Error parsing html: " + fullPath);
-            }
-         }
-         if ( (followLinks) &&  (source != null) )
-         {            
+               source = new Source(uri.toURL());
+            if (source == null)
+               return 1L;
             List<Element> linkElements=source.findAllElements(HTMLElementName.A);
             for (Iterator<Element> it=linkElements.iterator(); it.hasNext();)
             {
@@ -198,42 +210,47 @@ public class HTMLIndexer extends Indexer implements Indexable, Cloneable
                p = newHref.indexOf('?');
                if (p >= 0)
                   newHref = newHref.substring(0, p);
-               boolean mustNorm = ( (newHref.indexOf("..") >= 0) || 
-                                    (newHref.indexOf(".") >= 0) );
-               if (mustNorm)
-               {   
-                  File f = new File(newHref);
-                  newHref = f.getNormalizedPath();
-               }   
-               
                if (duplicates.containsKey(newHref))
                   continue;
-               String newPath = fullPath;
-               p = newPath.lastIndexOf('/');
-               if (p > 0)
-                  newPath = newPath.substring(0, p) + "/" + linkHref;
-               if (mustNorm)
-               {   
-                  File f = new File(newPath);
-                  newPath = f.getNormalizedPath();
-               }   
-               
-               p = newPath.indexOf('?');
+
+               boolean mustNorm = ( (newHref.indexOf("..") >= 0) || 
+                                    (newHref.indexOf(".") >= 0) );                              
+
+               String uriPath = uri.getPath();
+               p = uriPath.lastIndexOf('/');
                if (p >= 0)
-                  newPath = newPath.substring(0, p);
+                  uriPath = uriPath.substring(0, p);
+               URI newUri = new URI(uri.getScheme(), uri.getUserInfo(), uri.getHost(), uri.getPort(),
+                                    uriPath + "/" + linkHref, uri.getQuery(), uri.getFragment());
+               if (mustNorm)
+               {
+                  Matcher matcher = AjaxIndexer.URL_PATTERN.matcher(href);
+                  if (matcher.matches())
+                  {
+                     newUri = newUri.normalize();
+                     newHref = newUri.toASCIIString();
+                  }
+                  else
+                  {
+                     File f = new File(newHref);
+                     newHref = f.getNormalizedPath();
+                  }
+               }
+               if (duplicates.containsKey(newHref))
+                  continue;
                String ext = Utils.getExtension(linkHref);
                if (! supportsFileType(ext))
                {
                   Indexable altIndexer = IndexFactory.getApp().getIndexer(ext);
                   if (altIndexer != null)
                   {
-                     c = altIndexer.index(newHref, newPath, true);
+                     c = altIndexer.index(newHref, newUri, true);
                      if (c > 0) count += c;
                   }
                }
                else
                {
-                  c = index(newHref, newPath, true, duplicates);
+                  c = index(newHref, newUri, true, duplicates);
                   if (c > 0) count += c;
                }
             }            
@@ -242,20 +259,23 @@ public class HTMLIndexer extends Indexer implements Indexable, Cloneable
       }
       catch (Exception e)
       {         
-         logger.error("Indexing document " + fullPath, e);
+         logger.error("Indexing document " + uri.toString(), e);
          return ((count == 0) ? -1 : count);
       }
-
-
       finally
       {
-         if (is != null)
-            try { is.close(); } catch (Exception e) {}
          if (source != null)
          {
             source.clearCache();
             source = null;
          }
+         if (reader != null)
+            try { reader.close();  } catch (Exception _e) {}
+         if (fis != null)
+            try { fis.close(); } catch (Exception _e) {}
+         if ( (tmpHtml != null) &&
+              (tmpHtml.getAbsolutePath().toLowerCase().indexOf(System.getProperty("java.io.tmpdir")) >= 0) )
+            tmpHtml.delete();
       }
       
       return count;      

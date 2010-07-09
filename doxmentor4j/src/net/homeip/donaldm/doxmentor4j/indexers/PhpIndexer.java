@@ -13,6 +13,7 @@
 
 package net.homeip.donaldm.doxmentor4j.indexers;
 
+import java.util.HashMap;
 import net.homeip.donaldm.doxmentor4j.indexers.spi.Indexable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,7 +44,12 @@ public class PhpIndexer extends SourceIndexer implements Indexable, Cloneable
    //---------------
    {
       // Allows .h files to be indexed with CppIndexer
-      EXTENSIONS = new String[] { "php", "php4", "php5" }; 
+      m_extensions = new HashMap<String, Void>()
+      {{
+          put("php", null );
+          put("php4", null);
+          put("php5", null);
+      }};
    }
 
    @Override public String[] getLanguageStopWords()

@@ -14,14 +14,8 @@
 package net.homeip.donaldm.doxmentor4j;
 
 import com.sun.net.httpserver.HttpExchange;
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.InputStreamReader;
-import java.util.Iterator;
-import java.util.TreeSet;
 import net.homeip.donaldm.httpdbase4j.CloneableHeaders;
-import net.homeip.donaldm.httpdbase4j.DirItemInterface;
-import net.homeip.donaldm.httpdbase4j.DirItemInterface.SORTBY;
 import net.homeip.donaldm.httpdbase4j.FileRequest;
 import net.homeip.donaldm.httpdbase4j.Http;
 import net.homeip.donaldm.httpdbase4j.HttpResponse;
@@ -142,11 +136,13 @@ public class AjaxNodeHandler implements Postable
       r.setMimeType(Http.MIME_HTML);
       r.addHeader("Cache-Control", "no-cache");
       r.addHeader("Pragma", "no-cache");
-      r.addHeader("Expires","-1");
+      //r.addHeader("Expires","-1");
+      r.addHeader("Expires", "Sat, 26 Jul 1997 05:00:00 GMT");
       r.addHeader("Content-Length", Integer.toString(html.length()));
       return r;
    }
-   
+
+/*
    private DirItemInterface getNodeId(Request req)
    //---------------------------------------------
    {
@@ -176,7 +172,7 @@ public class AjaxNodeHandler implements Postable
    //-------------------------------------------
    {
       BufferedReader reader = null;
-      StringBuffer sb = new StringBuffer();
+      StringBuilder sb = new StringBuilder();
       String line = null;
       try
       {
@@ -200,6 +196,8 @@ public class AjaxNodeHandler implements Postable
       }
       return sb.toString();
    }
-   }
+ *
+ */
+}
 
 

@@ -13,6 +13,7 @@
 
 package net.homeip.donaldm.doxmentor4j.indexers;
 
+import java.util.HashMap;
 import net.homeip.donaldm.doxmentor4j.indexers.spi.Indexable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,7 +42,11 @@ public class JavaIndexer extends SourceIndexer implements Indexable, Cloneable
    //-----------------
    {
       // gloss over groovy specific keywords
-      EXTENSIONS = new String[] { "java", "groovy" }; 
+      m_extensions = new HashMap<String, Void>()
+      {{
+          put("java", null );
+          put("groovy", null);
+      }};
    }   
    
    @Override

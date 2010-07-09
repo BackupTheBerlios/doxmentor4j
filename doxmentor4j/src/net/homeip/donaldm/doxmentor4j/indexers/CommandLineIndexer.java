@@ -14,15 +14,20 @@
 package net.homeip.donaldm.doxmentor4j.indexers;
 
 
+import java.io.Reader;
+import java.net.MalformedURLException;
+import java.net.URI;
 import net.homeip.donaldm.doxmentor4j.indexers.spi.Indexable;
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 
 import net.homeip.donaldm.doxmentor4j.Utils;
 import de.schlichtherle.io.File;
-import net.homeip.donaldm.httpdbase4j.Http;
+import java.io.BufferedWriter;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
 import net.homeip.donaldm.httpdbase4j.Httpd;
 
 /**
@@ -45,7 +50,7 @@ abstract public class CommandLineIndexer extends Indexer
    
    protected boolean m_isfollowLinks = false;
 
-   abstract protected boolean getExtractor();
+   abstract protected boolean getExtractor(boolean isFindDefault);
 
    public CommandLineIndexer() { }
    
@@ -64,7 +69,7 @@ abstract public class CommandLineIndexer extends Indexer
    }
    
    public CommandLineIndexer(String extractorPath, String extractorArgs, 
-                    Indexable indexor)
+                             Indexable indexor)
    //-------------------------------------------------------
    {
       m_extractorPath = extractorPath;
@@ -94,69 +99,172 @@ abstract public class CommandLineIndexer extends Indexer
       m_extractorArgs = extractorArgs;
    }
    
-   protected void setIndexer(Indexable indexer)
-   //------------------------------------------
-   {
-      m_indexor = indexer;
-   }
-   
+   protected void setIndexer(Indexable indexer) { m_indexor = indexer; }
+
+   protected Indexable getIndexer() { return m_indexor; }
+
    @Override
-   public Object getData(InputStream is, String href, String fullPath, 
-                         StringBuffer title, StringBuffer body)
-   //--------------------------------------------------------------------
+   public Reader getText(URI uri, int page, StringBuilder title)
+          throws FileNotFoundException, MalformedURLException, IOException
+   //-----------------------------------------------------------------------
    {
       if (m_indexor == null)
-         m_indexor = IndexFactory.getApp().getIndexer("html");
-      String ext = Utils.getExtension(fullPath);
-      if (m_indexor.supportsFileType(ext))
-         return m_indexor.getData(is, href, fullPath, title, body);
-      else
-         return "";
-   }
-   
-   @Override
-   public long index(String href, String fullPath, boolean followLinks,
-                     Object... extraParams) throws IOException
-   //------------------------------------------------------------------
-   {
+         m_indexor = IndexFactory.getApp().getIndexer("txt");
       if (m_extractorPath == null)
-         getExtractor();
+         getExtractor(true); // Overridden getExtractor should also set m_indexor
+      if ( (m_extractorPath == null) || (! new File(m_extractorPath).exists()) )
+      {
+         logger().error("Extract program executable {} not set or could not be found", m_extractorPath);
+         return null;
+      }
+
+      String scheme = uri.getScheme();
+      if ( (scheme != null) && (! scheme.equalsIgnoreCase("file")) )
+      {
+         logger().error("Cannot extract index text from a remote file");
+         return null;
+      }
+      java.io.File tmpFileOut = extract(uri);
+      if (! tmpFileOut.isDirectory())
+         return getText(tmpFileOut, title);
+      else
+      {
+         java.io.File[] files = tmpFileOut.listFiles();
+         java.io.File tmpAllFiles = mergeFiles(files, title, null);
+         Utils.deleteDir(tmpFileOut);
+         return new FileReader(tmpAllFiles);
+      }
+   }
+
+   @Override
+   public long index(String href, URI uri, boolean followLinks, Object... extraParams) throws IOException
+   //---------------------------------------------------------------------------------------
+   {
+      if (m_indexor == null)
+         m_indexor = IndexFactory.getApp().getIndexer("txt");
+      if (m_extractorPath == null)
+         getExtractor(true);
       if ( (m_extractorPath == null) || (! new File(m_extractorPath).exists()) )
       {
          logger().error("Extract program executable not set or could not be found");
          return -1;
-      }         
+      }
+      String scheme = uri.getScheme();
+      if ( (scheme != null) && (! scheme.equalsIgnoreCase("file")) )
+      {
+         logger().error("Cannot index text from a remote file");
+         return -1;
+      }
       if (m_indexWriter == null)
       {
          logger().error("Index writer is null");
          return -1;
       }
-      if (m_indexor == null)
-         m_indexor = IndexFactory.getApp().getIndexer("html");
-      File archiveFile = new File(fullPath);
+      java.io.File tmpFileOut = extract(uri);
+           
+      if (! tmpFileOut.isDirectory())
+         return m_indexor.index(href, tmpFileOut.toURI(), followLinks, extraParams);
+      else
+      {
+         java.io.File[] files = tmpFileOut.listFiles();
+         java.io.File tmpAllFiles = mergeFiles(files, null, null);
+         Utils.deleteDir(tmpFileOut);
+         return m_indexor.index(href, tmpAllFiles.toURI(), false, extraParams);
+      }
+   }
+
+   protected Reader getText(java.io.File f, StringBuilder title)
+             throws FileNotFoundException, MalformedURLException, IOException
+   //--------------------------------------------------
+   {
+      if (! m_indexor.supportsFileType(Utils.getExtension(f.getName())))
+         return null;
+      return m_indexor.getText(f.toURI(), -1, title);
+   }
+
+   private java.io.File mergeFiles(java.io.File[] files, StringBuilder title, BufferedWriter writer)
+   //------------------------------------------------------------------------------------------------
+   {
+      BufferedReader reader = null;
+      java.io.File tmpFile = null;
+      try
+      {
+         if (writer == null)
+         {
+            tmpFile = File.createTempFile("clac", ".tmp");
+            tmpFile.delete();
+            writer = new BufferedWriter(new FileWriter(tmpFile));
+         }
+         for (java.io.File file : files)
+         {
+            if (file.isDirectory())
+            {
+               mergeFiles(file.listFiles(), title, writer);
+               continue;
+            }
+            if (! file.isFile()) continue;
+            try { reader = new BufferedReader(getText(file, title)); } catch (Exception _e) { reader = null; }
+            if (reader != null)
+            {
+               int ch;
+               while ( (ch = reader.read()) != -1)
+                  writer.write(ch);
+               try { reader.close(); reader = null; } catch (Exception _e) {}
+            }
+         }
+         try { writer.close(); writer = null; } catch (Exception _e) {}
+         tmpFile.deleteOnExit();
+         return tmpFile;
+      }
+      catch (Exception e)
+      {
+         logger().error("", e);
+         return null;
+      }
+      finally
+      {
+         if (reader != null)
+            try { reader.close(); } catch (Exception _e) {}
+         if (writer != null)
+            try { writer.close(); } catch (Exception _e) {}
+      }
+   }
+
+   protected java.io.File extract(URI uri)
+   //---------------------------------------------
+   {
+      String ext = null;
+      if (m_indexor != null)
+         ext = m_indexor.supportedFileTypes()[0];
+      if ( (ext == null) || (ext.trim().isEmpty()) )
+         ext = ".tmp";
+      else
+         ext = "." + ext;
+      File archiveFile = Utils.uri2Archive(uri);
+      if (archiveFile == null)
+         archiveFile = new File(uri.getPath());
       boolean isJar = (archiveFile.getTopLevelArchive() != null);
-      java.io.File tmpFileIn = null,  
-                   tmpFileOut = File.createTempFile("clout", "." + 
-                                             m_indexor.supportedFileTypes()[0]);
+      java.io.File tmpFileIn = null,  tmpFileOut = null;
+      try { tmpFileOut = File.createTempFile("clout", ext); } catch (Exception _e) { tmpFileOut = new java.io.File(archiveFile.getName() + ext); }
       String args = "";
       if (isJar)
-      {         
-         tmpFileIn = File.createTempFile("clin", "." + supportedFileTypes()[0]);
+      {
+         try { tmpFileIn = File.createTempFile("clin", ".tmp"); } catch (Exception _e) { tmpFileOut = new java.io.File(archiveFile.getName() + ".in"); }
          File f = new File(tmpFileIn);
          if (! archiveFile.copyTo(f))
          {
-            System.err.println("Error copying archive file " + 
-                               archiveFile.getAbsolutePath() + 
+            System.err.println("Error copying archive file " +
+                               archiveFile.getAbsolutePath() +
                                " to temp file " + f.getAbsolutePath());
             f.delete();
-            return -1;
+            return null;
          }
-         if (m_extractorArgs != null) 
+         if (m_extractorArgs != null)
             args = m_extractorArgs.replaceAll("\\$s", tmpFileIn.getAbsolutePath());
       }
-      else            
-         if (m_extractorArgs != null) 
-            args = m_extractorArgs.replaceAll("\\$s", fullPath);
+      else
+         if (m_extractorArgs != null)
+            args = m_extractorArgs.replaceAll("\\$s", uri.getPath());
       if (args.indexOf("$d") >= 0)
          args = args.replaceAll("\\$d", tmpFileOut.getAbsolutePath());
       if (args.indexOf("$D") >= 0)
@@ -165,32 +273,30 @@ abstract public class CommandLineIndexer extends Indexer
          tmpFileOut.mkdirs();
          args = args.replaceAll("\\$D", tmpFileOut.getAbsolutePath());
          if ( (! tmpFileOut.exists()) || (! tmpFileOut.isDirectory()) )
-            return -1;
-      }         
-      
+         {
+            if (tmpFileIn != null)
+               tmpFileIn.delete();
+            return null;
+         }
+      }
+
       String command = String.format("%s %s", m_extractorPath, args);
       StringBuffer output = new StringBuffer();
       StringBuffer error = new StringBuffer();
-      int status = CommandLineIndexer.exec(command, output, error);
+      int status = exec(command, output, error);
       if ( ((tmpFileOut.isDirectory()) && (tmpFileOut.list().length == 0)) ||
            (! tmpFileOut.exists()) )
       {
          logger().error(command + " failed: Status = " + status + " output: " +
                         output.toString() + Httpd.EOL + error.toString());
-         return -1;         
+         if (tmpFileIn != null)
+            tmpFileIn.delete();
+         return null;
       }
-      
-      if (! tmpFileOut.isDirectory())
-         return m_indexor.index(href, tmpFileOut.getAbsolutePath(), followLinks, 
-                                extraParams);
-      else
-      {
-         File d = new File(tmpFileOut);
-         return _index(href, d, extraParams);            
-      }
+      return tmpFileOut;
    }
-   
-   static public int exec(String command, StringBuffer stdout,
+
+   public int exec(String command, StringBuffer stdout,
            StringBuffer stderr)           
    // -----------------------------------------------------------------
    {
@@ -219,7 +325,7 @@ abstract public class CommandLineIndexer extends Indexer
       }
       catch (Exception e)
       {
-         e.printStackTrace();         
+         logger().error(command, e);
          return -1;
       }
       finally
@@ -251,32 +357,5 @@ abstract public class CommandLineIndexer extends Indexer
    {
       CommandLineIndexer klone = (CommandLineIndexer) super.clone();
       return klone;
-   }
-   
-   private long _index(String href, File fullPath, Object... extraParams) 
-           throws IOException
-   //--------------------------------------------------------------------
-   {
-      File[] dir = (File[]) fullPath.listFiles();
-      long count =0, c;
-      for (int i=0; i<dir.length; i++)
-      {
-         File f = dir[i];
-         c = 0;
-         if (f.isDirectory())
-            c = _index(href, f, extraParams);
-         else
-         {
-            Indexable indexor = m_indexor;
-            String path = f.getAbsolutePath();
-            String ext = Utils.getExtension(path);
-            if (! indexor.supportsFileType(ext))
-               indexor = IndexFactory.getApp().getIndexer(ext);
-            if (indexor != null)
-               c = indexor.index(href, path, false, extraParams);            
-         }
-         count += c;
-      }
-      return count;
    }
 }

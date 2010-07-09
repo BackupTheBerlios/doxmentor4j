@@ -13,23 +13,31 @@
 
 package net.homeip.donaldm.doxmentor4j.indexers;
 
-import net.homeip.donaldm.doxmentor4j.indexers.spi.Indexable;
-import java.io.BufferedInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.StringWriter;
 
-import net.homeip.donaldm.doxmentor4j.AjaxIndexer;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.Reader;
+import java.io.StringWriter;
+import java.net.MalformedURLException;
+import java.net.URI;
 
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
-import org.pdfbox.pdmodel.PDDocument;
-import org.pdfbox.pdmodel.PDDocumentInformation;
-import org.pdfbox.util.PDFTextStripper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import de.schlichtherle.io.FileInputStream;
+import java.io.FileWriter;
+import java.io.StringReader;
+import java.io.Writer;
+import java.util.HashMap;
+
+import net.homeip.donaldm.doxmentor4j.indexers.spi.Indexable;
+import net.homeip.donaldm.doxmentor4j.AjaxIndexer;
+import net.homeip.donaldm.doxmentor4j.Utils;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDDocumentInformation;
+import org.apache.pdfbox.util.PDFTextStripper;
 
 public class PDFIndexer extends Indexer implements Indexable, Cloneable
 //=====================================================================
@@ -37,114 +45,160 @@ public class PDFIndexer extends Indexer implements Indexable, Cloneable
    final static private Logger logger = LoggerFactory.getLogger(PDFIndexer.class);
 
    @Override public Logger logger() {return logger; }
-
-   private PDFTextStripper m_stripper = null;
               
    public PDFIndexer()
    //-----------------
    {
-      EXTENSIONS = new String[] { "pdf" };
+      m_extensions = new HashMap<String, Void>()
+      {{
+          put("pdf", null );
+      }};
    }
 
    @Override
-   public Object getData(InputStream is, String href, String fullPath, 
-                         StringBuffer title, StringBuffer body)
-   //-------------------------------------------------------------------
+   public Reader getText(URI uri, int page, StringBuilder title) throws FileNotFoundException,
+                                                                        MalformedURLException,
+                                                                        IOException
+   //-----------------------------------------------------------------------------------------
    {
-      BufferedInputStream bis = null;
+      FileWriter writer = null;
       PDDocument pdf = null;
+      PDFTextStripper stripper = null;
+      java.io.File tmpPdf = null;
       try
-      {
-         if (is instanceof BufferedInputStream)
-            bis = (BufferedInputStream) is;
+      {         
+         tmpPdf = Utils.uri2File(uri);
+         if (tmpPdf != null)
+            pdf = PDDocument.load(tmpPdf.getAbsolutePath(), true);
          else
-            bis = new BufferedInputStream(is);
-         pdf = PDDocument.load(bis);
+            pdf = PDDocument.load(uri.toURL(), true);
          PDDocumentInformation pdfInfo = pdf.getDocumentInformation();
          String s = pdfInfo.getTitle();
          if ( (s == null) || (s.length() == 0) )
-            s = href;
+            s = uri.getPath();
          if (title != null)
             title.append(s);
-         StringWriter writer = new StringWriter();
-         if (m_stripper == null)
-            m_stripper = new PDFTextStripper();
+         stripper = new PDFTextStripper();
+         if (page >= 0)
+         {
+            stripper.setStartPage(page);
+            stripper.setEndPage(page);
+         }
          else
-            m_stripper.resetEngine();
-         m_stripper.writeText(pdf, writer);
-         if (body != null)
-            body.append(writer.getBuffer().toString());
-      }
-      catch (Exception e)
-      {
-         logger.error("Error extracting PDF text from " + fullPath, e);
-         return null;
+         {
+            stripper.setStartPage(1);
+            stripper.setEndPage(pdf.getNumberOfPages());
+         }
+         java.io.File f = java.io.File.createTempFile("pdf", ".tmp");
+         writer = new FileWriter(f);
+         stripper.writeText(pdf, writer);
+         try { writer.close(); writer = null; } catch (Exception _e) {}
+         stripper.resetEngine();
+         return new FileReader(f);
       }
       finally
       {
-         if (bis != null)
-            try { bis.close(); } catch (Exception e) {}
+         if (stripper != null)
+            try { stripper.resetEngine(); } catch (Exception _e) {}
+         if (pdf != null)
+            try { pdf.close(); } catch (Exception _e) {}
+         if (writer != null)
+            try { writer.close(); } catch (Exception _e) {}
+         if ( (tmpPdf != null) &&
+              (tmpPdf.getAbsolutePath().toLowerCase().indexOf(System.getProperty("java.io.tmpdir")) >= 0) )
+            tmpPdf.delete();
       }
-      return pdf;
    }
 
    @Override
-   public long index(String href, String fullPath, boolean followLinks,
-                     Object... extraParams) throws IOException
-   //------------------------------------------------------------------
+   public long index(String href, URI uri, boolean followLinks, Object... extraParams) throws IOException
+   //-----------------------------------------------------------------------------------------------------
    {
       if (m_indexWriter == null)
       {
          logger.error("PDFIndexer: index writer is null");
          return -1;
       }
-      long count =0, c =0;
       PDDocument pdf = null;
-      InputStream is = null;
+      PDFTextStripper stripper = null;
+      Reader reader = null;
+      Writer writer = null;
+      java.io.File tmpPdf = null;
       try
-      {
-         is = new FileInputStream(fullPath);         
-         if (is == null) return ((count == 0) ? -1 : count);
-         
-         StringBuffer title = new StringBuffer();
-         StringBuffer body = new StringBuffer();
-         pdf = (PDDocument) getData(is, href, fullPath, title, body);
-         if (pdf != null)
-         {                  
+      {                  
+         tmpPdf = Utils.uri2File(uri);
+         if (tmpPdf != null)
+            pdf = PDDocument.load(tmpPdf.getAbsolutePath(), true);
+         else
+            pdf = PDDocument.load(uri.toURL(), true);
+         PDDocumentInformation pdfInfo = pdf.getDocumentInformation();
+         String title = pdfInfo.getTitle();
+         if ( (title == null) || (title.isEmpty()) )
+            title = uri.getPath();
+         stripper = new PDFTextStripper();
+         int noPages = pdf.getNumberOfPages();         
+         stripper.setSuppressDuplicateOverlappingText(false);         
+         if (noPages != PDDocument.UNKNOWN_NUMBER_OF_PAGES)
+         {
+            for (int page=1; page<=noPages; page++)
+            {
+               stripper.setStartPage(page);
+               stripper.setEndPage(page);
+               writer = new StringWriter();
+               stripper.writeText(pdf, writer);
+               reader = new StringReader(writer.toString());
+               Document doc = new Document();
+               doc.add(new Field("path", href, Field.Store.YES, Field.Index.NO));
+               doc.add(new Field("title", title.toString(), Field.Store.YES, Field.Index.ANALYZED));
+               doc.add(new Field("contents", reader, Field.TermVector.WITH_POSITIONS_OFFSETS));
+               doc.add(new Field("page", Integer.toString(page), Field.Store.YES, Field.Index.NO));
+               if (addDocument(doc))
+                  AjaxIndexer.incrementCount();
+               try { writer.close(); writer = null; } catch (Exception _e) {}
+               try { reader.close(); reader = null; } catch (Exception _e) {}
+               if ((page % 50) == 0)
+               {
+                  try { System.runFinalization(); System.gc(); } catch (Exception _e) {}
+               }
+            }
+         }
+         else
+         {
+            java.io.File f = java.io.File.createTempFile("pdf", ".tmp");
+            writer = new FileWriter(f);
+            stripper.writeText(pdf, writer);
+            try { writer.close(); writer = null; } catch (Exception _e) {}
+            reader = new FileReader(f);
             Document doc = new Document();
             doc.add(new Field("path", href, Field.Store.YES, Field.Index.NO));
-            doc.add(new Field("title", title.toString(), 
-                              Field.Store.YES, Field.Index.TOKENIZED));
-            doc.add(new Field("contents", body.toString(), 
-                              Field.Store.NO, Field.Index.TOKENIZED));
+            doc.add(new Field("title", title.toString(), Field.Store.YES, Field.Index.ANALYZED));
+            doc.add(new Field("contents", reader, Field.TermVector.WITH_POSITIONS_OFFSETS));
+            doc.add(new Field("page", "-1", Field.Store.YES, Field.Index.NO));
             if (addDocument(doc))
-            {
                AjaxIndexer.incrementCount();
-               count++;
-            }
-            else
-               return -1;
-            doc = null;
+            try { reader.close(); reader = null; } catch (Exception _e) {}
+            try { System.runFinalization(); System.gc(); } catch (Exception _e) {}
          }
+         return 1;
       }
       catch (Exception e)
       {
-         logger.error("Error indexing PDF text from " + fullPath, e);
-         return ((count == 0) ? -1 : count);
+         logger.error("Error indexing PDF text from " + uri.toString(), e);
+         return -1;
       }
-
       finally
       {
-         if (is != null)
-            try { is.close(); } catch (Exception e) {}
+         if (stripper != null)
+            try { stripper.resetEngine(); } catch (Exception _e) {}
          if (pdf != null)
-         {
-            pdf.close();
-            pdf = null;
-         }
-         
+            try { pdf.close(); } catch (Exception _e) {}
+         if (writer != null)
+            try { writer.close(); } catch (Exception _e) {}
+         if (reader != null)
+            try { reader.close(); } catch (Exception _e) {}
+         if ( (tmpPdf != null) &&
+              (tmpPdf.getAbsolutePath().toLowerCase().indexOf(System.getProperty("java.io.tmpdir")) >= 0) )
+            tmpPdf.delete();
       }
-      return count;
    }
-   
 }
