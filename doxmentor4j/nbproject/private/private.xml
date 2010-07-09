@@ -7,4 +7,21 @@
             <line>223</line>
         </file>
     </editor-bookmarks>
+    <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/1">
+        <file>file:/user/src/Java/cvs/doxmentor4j/src/net/homeip/donaldm/doxmentor4j/DoxMentor4J.java</file>
+        <file>file:/user/src/Java/cvs/doxmentor4j/src/net/homeip/donaldm/doxmentor4j/templates/Index.java</file>
+        <file>file:/user/src/Java/cvs/doxmentor4j/src/net/homeip/donaldm/doxmentor4j/IndexThread.java</file>
+        <file>file:/user/src/Java/cvs/doxmentor4j/src/net/homeip/donaldm/doxmentor4j/AjaxIndexer.java</file>
+        <file>file:/user/src/Java/cvs/doxmentor4j/src/net/homeip/donaldm/doxmentor4j/indexers/JavaIndexer.java</file>
+        <file>file:/user/src/Java/cvs/doxmentor4j/src/net/homeip/donaldm/doxmentor4j/indexers/Indexer.java</file>
+        <file>file:/user/src/Java/cvs/doxmentor4j/src/net/homeip/donaldm/doxmentor4j/Utils.java</file>
+        <file>file:/user/src/Java/cvs/doxmentor4j/src/net/homeip/donaldm/doxmentor4j/indexers/IndexFactory.java</file>
+        <file>file:/user/src/Java/cvs/doxmentor4j/src/net/homeip/donaldm/doxmentor4j/indexers/PDFIndexer.java</file>
+        <file>file:/user/src/Java/cvs/doxmentor4j/src/net/homeip/donaldm/doxmentor4j/indexers/SourceIndexer.java</file>
+        <file>file:/user/src/Java/cvs/doxmentor4j/src/net/homeip/donaldm/doxmentor4j/ArchiveDirectory.java</file>
+        <file>file:/user/src/Java/cvs/doxmentor4j/resources/htdocs/scripts/index.js</file>
+        <file>file:/user/src/Java/cvs/doxmentor4j/resources/htdocs/index.st</file>
+        <file>file:/user/src/Java/cvs/doxmentor4j/docs/properties.html</file>
+        <file>file:/user/src/Java/cvs/doxmentor4j/docs/customize.html</file>
+    </open-files>
 </project-private>
