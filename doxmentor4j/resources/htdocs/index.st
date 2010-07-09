@@ -13,7 +13,7 @@
 	</script>
    <META Http-Equiv="Cache-Control" Content="no-cache">
    <META Http-Equiv="Pragma" Content="no-cache">
-   <META Http-Equiv="Expires" Content="-1">
+   <META Http-Equiv="Expires" Content="Sat, 26 Jul 1997 05:00:00 GMT">
 </head>
 <body> 
    <div id="Heading">  
@@ -25,15 +25,18 @@
          <div id="Heading_right_top">
             $if(searchable)$
                   <input type="text" align="left" id="searchtext" name="searchtext" size="20">
+                  <label for="maxhits">Max Hits</label>
+                  <input type="text" align="left" id="maxhits" name="maxhits" value="100" size="4">
                   <input type="submit" value="Search" align="right" id="searchbutton" onclick="search()">
             $endif$
             $if(indexable)$
                   <div id="reindex">
-                     <input value="ReIndex" type="submit"  onclick="reindex()">
+                     <input value="ReIndex" type="submit"  id="indexbutton" onclick="reindex()">
                      <font size="-1">Powered by&nbsp;</font>
                      <img src="images/lucene_green_150-trans.png">
                   </div>
                   <div id="reindexing" style="display: none;">
+                     <input value="Stop" type="submit"  id="stopindexbutton" onclick="stopIndex()">
                      <span id="indexstatus">
                         Indexing:- Please be patient                     
                      </span>
