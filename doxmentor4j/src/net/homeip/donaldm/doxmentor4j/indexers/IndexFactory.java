@@ -95,21 +95,21 @@ public class IndexFactory
    public static Analyzer getAnalyzer() { return m_analyzer; }
    
    static public void create(File archiveFile, String archiveIndexDirName, 
-                             String indexDirName, boolean isCreate) 
+                             String indexDirName, boolean isCreate, boolean isReadOnly)
                  throws IOException
    //---------------------------------------------------------------------------
    {
       create(archiveFile, archiveIndexDirName, indexDirName, 
-             new StandardAnalyzer(DoxMentor4J.LUCENE_VERSION), isCreate);
+             new StandardAnalyzer(DoxMentor4J.LUCENE_VERSION), isCreate, isReadOnly);
    }
    
    static public void create(File archiveFile, String archiveIndexDirName, 
                              String indexDirName, Analyzer analyzer, 
-                             boolean isCreate) 
+                             boolean isCreate, boolean isReadOnly)
                  throws IOException
    //---------------------------------------------------------------------------
    {
-      if (m_indexWriter != null)
+      if ( (m_indexWriter != null) && (! isReadOnly) )
          try { m_indexWriter.close(); } catch (Exception e) {}
       boolean isClosed = false;
       if (mLuceneDirectory == null)
@@ -156,21 +156,22 @@ public class IndexFactory
       }
       else
          throw new IOException("Index directory invalid");
-      m_indexWriter = new IndexWriter(mLuceneDirectory, m_analyzer, isCreate,
-                                      IndexWriter.MaxFieldLength.UNLIMITED);
+      if (! isReadOnly)
+         m_indexWriter = new IndexWriter(mLuceneDirectory, m_analyzer, isCreate,
+                                         IndexWriter.MaxFieldLength.UNLIMITED);
    }      
    
-   static public void create(String indexDirName, boolean isCreate) throws IOException
+   static public void create(String indexDirName, boolean isCreate, boolean isReadOnly) throws IOException
    //---------------------------------------------------------------------------
    {
-      create(indexDirName, new StandardAnalyzer(DoxMentor4J.LUCENE_VERSION), isCreate);
+      create(indexDirName, new StandardAnalyzer(DoxMentor4J.LUCENE_VERSION), isCreate, isReadOnly);
    }
    
-   static public void create(String indexDirName, Analyzer analyzer, boolean isCreate) 
+   static public void create(String indexDirName, Analyzer analyzer, boolean isCreate, boolean isReadOnly)
                       throws IOException
    //---------------------------------------------------------------------------
    {
-      if (m_indexWriter != null)
+      if ( (m_indexWriter != null) && (! isReadOnly) )
          try { m_indexWriter.close(); } catch (Exception e) { logger.error("", e); }      
       m_analyzer = analyzer;
       java.io.File f = new File(indexDirName);
@@ -207,8 +208,9 @@ public class IndexFactory
             mDirectory = f;
          }
       }
-      m_indexWriter = new IndexWriter(mLuceneDirectory, m_analyzer, isCreate,
-                                      IndexWriter.MaxFieldLength.UNLIMITED);
+      if (! isReadOnly)
+         m_indexWriter = new IndexWriter(mLuceneDirectory, m_analyzer, isCreate,
+                                         IndexWriter.MaxFieldLength.UNLIMITED);
    }      
 
    public static boolean optimizeWriter()
@@ -259,6 +261,23 @@ public class IndexFactory
       }      
       return true;
    }
-   
+
+   public static void closeDirectory()
+   //---------------------------------
+   {
+      if (mLuceneDirectory != null)
+      {
+         try
+         {
+            mLuceneDirectory.close();
+            mLuceneDirectory = null;
+         }
+         catch (Exception e)
+         {
+            logger.error("", e);
+         }
+      }
+   }
+
    public static IndexWriter getWriter() { return m_indexWriter; }
 }
