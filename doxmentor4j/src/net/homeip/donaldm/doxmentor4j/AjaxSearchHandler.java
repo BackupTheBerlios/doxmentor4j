@@ -113,9 +113,9 @@ public class AjaxSearchHandler implements Postable
          try
          {
             if (archiveFile != null)
-               IndexFactory.create(archiveFile, archiveIndexDirName, indexDirName, false);
+               IndexFactory.create(archiveFile, archiveIndexDirName, indexDirName, false, true);
             else
-               IndexFactory.create(indexDirName, false);
+               IndexFactory.create(indexDirName, false, true);
             directory = IndexFactory.getDirectory();
             if (directory == null)
                return errorMessage("Could not open search index directory");
@@ -221,7 +221,7 @@ public class AjaxSearchHandler implements Postable
       {
          if (searcher != null) try { searcher.close(); } catch (Exception e) {}
          if (indexReader != null) try { indexReader.close(); } catch (Exception e) {}
-         if (directory != null) try { directory.close(); } catch (Exception e){}
+         IndexFactory.closeDirectory();
       }
       return html.toString();
    }
