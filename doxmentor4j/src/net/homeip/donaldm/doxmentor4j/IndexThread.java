@@ -78,9 +78,9 @@ public class IndexThread implements Callable<Boolean>
       try
       {
          if (archiveFile != null)
-            IndexFactory.create(archiveFile, archiveIndexDirName, indexDirName, true);
+            IndexFactory.create(archiveFile, archiveIndexDirName, indexDirName, true, false);
          else
-            IndexFactory.create(indexDirName, true);
+            IndexFactory.create(indexDirName, true, false);
       }
       catch (Exception e)
       {
@@ -100,7 +100,8 @@ public class IndexThread implements Callable<Boolean>
             return false;
          }
          // Recursively index archive
-         if (! _index(archiveDirectory, archiveDirectory.getAbsolutePath()))
+         final String home = archiveDirectory.getAbsoluteFile().toURI().toASCIIString();
+         if (! _index(archiveDirectory, home))
          {
             stop = busy = false;
             return false;
@@ -110,7 +111,8 @@ public class IndexThread implements Callable<Boolean>
          if (homeDir != null)
          {
             // Recursively index filesystem
-            if (! _index(homeDir, homeDir.getPath()))
+            final String home = homeDir.toURI().toASCIIString();
+            if (! _index(homeDir, home))
             {
                stop = busy = false;
                return false;
@@ -145,19 +147,21 @@ public class IndexThread implements Callable<Boolean>
          ret = waitForThreads();
          IndexFactory.optimizeWriter();
          IndexFactory.closeWriter();
+         IndexFactory.closeDirectory();
       }
       else
       {
          IndexFactory.optimizeWriter();
          IndexFactory.closeWriter();
+         IndexFactory.closeDirectory();
       }
 
       stop = busy = false;
       return ret;
    }
 
-   private boolean _index(java.io.File dir, String home)
-   //---------------------------------------------------
+   private boolean _index(final java.io.File dir, final String home)
+   //---------------------------------------------------------
    {
       File leaf = new File(dir, "LEAF");
       // dir can be a java.io.File or a de.schlichtherle.io.File
@@ -168,7 +172,8 @@ public class IndexThread implements Callable<Boolean>
          try
          {
             fis = new FileInputStream(leaf);
-            processLeaf(fis, leaf.getAbsolutePath(), home, isArchive);
+            final String leafName = leaf.getAbsoluteFile().toURI().toASCIIString();
+            processLeaf(fis, leafName, home, isArchive);
          }
          catch (Exception e)
          {
@@ -215,12 +220,24 @@ public class IndexThread implements Callable<Boolean>
    //---------------------------------------------------------------------------------------
    {
       StringBuffer text = new StringBuffer();
-      java.io.File f = new java.io.File(fullPath);
+      java.io.File f = null;
+      try
+      {
+         if (AjaxIndexer.URL_PATTERN.matcher(fullPath).matches())
+            f = new java.io.File(new URI(fullPath));
+         else
+            f = new java.io.File(fullPath);
+      }
+      catch (Exception e)
+      {
+         logger.error("", e);
+         return;
+      }
       if (f.getName().equalsIgnoreCase("leaf"))
          f = f.getParentFile();
       if (f == null)
          f = new File("/");
-      String relPath = Utils.getRelativePath(homePath, f.getAbsolutePath());
+      String relPath = Utils.getRelativePath(homePath, f.getAbsoluteFile().toURI().toASCIIString());
       if (NodeEntry.readNodeText(is, text))
       {
          Iterator<NodeEntry.ViewInfo> it;
