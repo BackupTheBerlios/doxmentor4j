@@ -37,7 +37,7 @@ public class AjaxIndexer implements Postable
 {    
    final static private Logger logger = LoggerFactory.getLogger(AjaxIndexer.class);
 
-   static final public Pattern URL_PATTERN = Pattern.compile("\\w+://.+");
+   static final public Pattern URL_PATTERN = Pattern.compile("^\\w+:/+.+");
 
    /**
     * Executor for the entire indexing process. Only one allowed.
