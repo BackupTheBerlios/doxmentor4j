@@ -57,11 +57,11 @@ abstract public class SourceIndexer extends Indexer implements Indexable, Clonea
             if (archiveFile != null)
                IndexFactory.create(archiveFile, archiveDirName, dirName,
                                    new SourceIndexer.SourceCodeAnalyzer(),
-                                   false);
+                                   false, false);
             else
                IndexFactory.create(dirName,
                                    new SourceIndexer.SourceCodeAnalyzer(),
-                                   false);
+                                   false, false);
             m_indexWriter = IndexFactory.getWriter();
          }
          catch (Exception e)
