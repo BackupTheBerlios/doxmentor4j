@@ -63,7 +63,8 @@
             $nodeEntries:templates/liTree()$
          </ul>
       </div>
-      <div id="search" style="display: none;" class="tabcontent"> 
+      <!-- <div id="search" style="display: none;" class="tabcontent">  -->
+      <div id="search" class="tabcontent">
       </div>      
       </div>
    </div>
